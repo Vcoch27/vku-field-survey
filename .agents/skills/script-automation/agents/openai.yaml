@@ -1,0 +1,4 @@
+interface:
+  display_name: "Script Automation"
+  short_description: "Automate repeatable local validation safely"
+  default_prompt: "Use $script-automation to design a safe deterministic validation script."

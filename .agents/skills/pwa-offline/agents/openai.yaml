@@ -1,0 +1,4 @@
+interface:
+  display_name: "PWA Offline"
+  short_description: "Plan and verify PWA offline behavior"
+  default_prompt: "Use $pwa-offline to evaluate this PWA installability or offline-shell task."

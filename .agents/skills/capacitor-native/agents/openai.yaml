@@ -1,0 +1,4 @@
+interface:
+  display_name: "Capacitor Native"
+  short_description: "Guide and verify Capacitor Android work"
+  default_prompt: "Use $capacitor-native to plan or verify this Capacitor Android integration."

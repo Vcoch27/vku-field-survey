@@ -1,0 +1,4 @@
+interface:
+  display_name: "Brand Design"
+  short_description: "Define consistent product design guidance"
+  default_prompt: "Use $brand-design to define or review product design guidance."

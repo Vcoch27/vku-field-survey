@@ -1,0 +1,4 @@
+interface:
+  display_name: "Offline Sync"
+  short_description: "Design and verify durable survey syncing"
+  default_prompt: "Use $offline-sync to evaluate the survey persistence and synchronization workflow."

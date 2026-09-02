@@ -1,34 +1,65 @@
-"YÊU CẦU HỆ THỐNG (SYSTEM PROMPT):
-Bạn là một Chuyên gia Kiến trúc sư Phần mềm Cấp cao (Senior Frontend Architect) vào năm 2026. Nhiệm vụ của bạn là viết toàn bộ mã nguồn hoàn chỉnh cho dự án "VKU Field Survey" dựa trên các thông số kỹ thuật (Spec) khắt khe dưới đây.
+# Project Mission
 
-I. NGĂN XẾP CÔNG NGHỆ (TECH STACK) BẮT BUỘC:
+Prepare and build VKU Field Survey only against the supplied VKU assignment, report template, approved decisions, and acceptance criteria. The repository is the shared memory for humans, Codex, Antigravity, reviewers, and QA.
 
-Frontend Framework: React (TypeScript) đóng gói PWA bằng Vite.
+# Current Phase
 
-Quản lý trạng thái: Zustand.
+`SETUP ONLY — PRODUCT CODE NOT STARTED`
 
-CSS/UI: TailwindCSS. Yêu cầu giao diện tràn viền (Edge-to-edge với viewport-fit=cover).
+Do not initialize or implement the product until Human Gates A–E are approved. Current setup artifacts may document future work but must not claim any product feature is complete.
 
-Đồ họa 3D: React Three Fiber (R3F) với @react-three/drei. Sử dụng frameloop="demand" trên <Canvas> để tránh ngốn RAM. Hoạt ảnh 3D phải ràng buộc với thao tác cuộn (Scroll-driven) thông qua GSAP hoặc CSS animation-timeline. Bắt buộc có cơ chế Fallback ẩn Canvas nếu xuất hiện lỗi webglcontextlost.
+# Source Priority
 
-Cơ sở dữ liệu cục bộ: idb (IndexedDB) lưu trữ bản nháp. Chụp ảnh dùng @capacitor/camera trả về Base64, sau đó bắt buộc phải chuyển đổi Base64 thành đối tượng Blob trước khi lưu vào IndexedDB để ngăn lỗi sập RAM (Out of Memory).
+1. Lecturer/user-supplied assignment
+2. Official report template
+3. Human-approved project decisions
+4. Official technology documentation
+5. Maintainer documentation and official repositories
+6. Secondary sources for discovery only
 
-Cấm (Negative Prompt): Tuyệt đối KHÔNG sử dụng Firebase Web SDK (không dùng Firestore, không dùng tính năng offline tích hợp của Firebase). KHÔNG dùng LocalStorage. Không cấu trúc thư mục dạng phẳng (flat).
+If sources conflict or a consequential requirement is missing, record it in `docs/research/OPEN_QUESTIONS.md` and wait for human approval.
 
-II. LUỒNG ĐỒNG BỘ NGOẠI TUYẾN (OFFLINE BACKGROUND SYNC):
+# General Guardrails
 
-Thiết kế biểu mẫu khảo sát thiết bị gồm: Phân khu (Khu K, VJIT Space...), Tòa nhà, Tầng, Phòng, Loại Thiết Bị, Đánh giá 1-5 sao, Ghi chú, Ảnh đính kèm.
+- Never invent or silently change requirements, APIs, backends, architecture, or rubric interpretation.
+- Do not add dependencies without documented justification and approval at the appropriate gate.
+- Inspect existing files before creating abstractions; prefer the smallest requirement-aligned change.
+- Do not duplicate utilities or global rules in skills.
+- Do not use placeholders or TODOs as production implementation.
+- Do not suppress errors or use TypeScript `any` unless explicitly approved.
+- Keep UI, use cases, persistence, and platform APIs behind approved boundaries.
+- Failed synchronization must never delete unsynced data.
+- Network availability is a retry trigger, not proof that a destination is reachable.
+- All synchronization triggers must call one approved synchronization use case.
 
-Khi không có mạng, lưu Form vào IndexedDB với trạng thái PENDING_SYNC.
+# Phase Gates
 
-Lắng nghe API @capacitor/network. Khi có mạng trở lại, kích hoạt hàm syncPendingSurveys(). Hàm này phải xử lý từng bản ghi, bọc vào FormData (chứa file Blob ảnh), gửi POST Request tới API (Backend sẽ là Cloudflare Workers Hono - mô phỏng URL API).
+No product implementation starts before human approval of:
 
-Do giới hạn Capacitor Background Task trên iOS là 30 giây, quá trình đẩy API (Batching) phải chia nhỏ gọn, tự động ngắt nếu quá 25 giây. Bản ghi gửi thành công cập nhật trạng thái thành SYNCED.
+- Gate A — Requirements
+- Gate B — Acceptance criteria
+- Gate C — Research risks
+- Gate D — Architecture
+- Gate E — Interface contracts
 
-III. CẤU TRÚC THƯ MỤC & XỬ LÝ NGOẠI LỆ:
+# Research Rules
 
-Tuân thủ kiến trúc Feature-Sliced Design.
+For consequential technical claims, prefer primary or official sources and record the URL, source class, verified fact, project implication, compatibility limitation, and date checked. Blogs, tutorials, forums, and Reddit are not authoritative when a primary source exists.
 
-Xử lý lỗi API (500) không được xóa dữ liệu IndexedDB. Lỗi từ chối Camera phải mở giao diện chọn File.
+# Git and Ownership Rules
 
-Hãy tiến hành viết cấu trúc mã nguồn theo đúng đặc tả này."
+- One writing agent per active worktree; do not edit another agent's worktree.
+- Use task-scoped branches and commits; do not merge directly into `main`.
+- Do not change unrelated files.
+- Reviewer passes are read-only; a reviewer does not fix the code being reviewed in the same pass.
+- QA is read-only except for approved evidence artifacts.
+
+# Definition of Ready
+
+A coding task requires a clear goal, requirement and acceptance IDs, source of truth, write scope, out-of-scope, resolved or recorded unknowns, fixed dependencies, and a verification method.
+
+# Verification and Definition of Done
+
+Run relevant tests, typecheck, lint, production build, and required browser/device scenarios when those commands exist. A task is complete only when acceptance IDs are mapped, scope is respected, verification passes, evidence and assumptions are recorded, risks are documented, and no blocking independent-review finding remains.
+
+Never mark a VKU rubric item complete without evidence. “Code written” is not “Done.”

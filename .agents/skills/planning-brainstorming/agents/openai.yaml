@@ -1,0 +1,4 @@
+interface:
+  display_name: "Planning and Brainstorming"
+  short_description: "Turn scoped problems into verified plans"
+  default_prompt: "Use $planning-brainstorming to explore options and produce a scoped task plan."

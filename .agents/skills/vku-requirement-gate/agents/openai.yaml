@@ -1,0 +1,4 @@
+interface:
+  display_name: "VKU Requirement Gate"
+  short_description: "Map VKU work to approved requirements"
+  default_prompt: "Use $vku-requirement-gate to check this task against VKU requirements and acceptance IDs."

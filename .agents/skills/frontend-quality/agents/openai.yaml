@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend Quality"
+  short_description: "Review frontend implementation quality"
+  default_prompt: "Use $frontend-quality to review this frontend change against the project quality contract."

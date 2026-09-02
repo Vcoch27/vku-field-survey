@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI Quality"
+  short_description: "Verify mobile survey interface quality"
+  default_prompt: "Use $ui-quality to inspect the mobile survey UI states and evidence."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Troubleshooting"
+  short_description: "Diagnose failures with reproducible evidence"
+  default_prompt: "Use $troubleshooting to diagnose this failure and report the verified root cause."
