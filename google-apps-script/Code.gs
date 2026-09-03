@@ -1,14 +1,18 @@
 /**
  * Google Apps Script Web App Backend for VKU Field Survey
  *
- * Receives survey submissions from the VKU Field Survey React/PWA/Capacitor client
- * and appends them to a private Google Sheet.
+ * Receives survey submissions from the VKU Field Survey React/PWA/Capacitor client,
+ * saves photos into a dedicated Google Drive folder,
+ * and appends records with photo hyperlinks to a private Google Sheet.
  *
  * Architecture:
- * Client (HTTPS POST) -> Apps Script Web App (Executes as owner) -> Private Google Sheet
+ * Client (HTTPS POST) -> Apps Script Web App (Executes as owner)
+ *                       ├─> Google Drive Folder ("VKU_Field_Survey_Photos")
+ *                       └─> Private Google Sheet ("SurveyResponses" sheet)
  */
 
 const DEFAULT_SHEET_NAME = 'SurveyResponses';
+const DEFAULT_FOLDER_NAME = 'VKU_Field_Survey_Photos';
 
 const HEADERS = [
   'submission_id',
@@ -21,6 +25,7 @@ const HEADERS = [
   'condition_rating',
   'defect_notes',
   'photo_id',
+  'photo_url',
   'photo_captured_at',
   'synced_at',
 ];
@@ -36,7 +41,7 @@ function doGet(e) {
   return createJsonResponse({
     ok: true,
     service: 'VKU Field Survey Submission Endpoint',
-    version: '1.0.0',
+    version: '1.1.0',
     timestamp: new Date().toISOString(),
   });
 }
@@ -46,7 +51,7 @@ function doGet(e) {
  */
 function doPost(e) {
   const lock = LockService.getScriptLock();
-  const hasLock = lock.tryLock(10000); // Wait up to 10s for concurrent lock
+  const hasLock = lock.tryLock(15000); // Wait up to 15s for concurrent lock
 
   if (!hasLock) {
     return createJsonResponse({
@@ -129,10 +134,8 @@ function doPost(e) {
       });
     }
 
-    // Ensure header row exists
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow(HEADERS);
-    }
+    // Ensure headers exist and match current schema
+    ensureHeaderColumns(sheet);
 
     // 5. Idempotency Check: Prevent duplicate submission_id insertion
     const submissionId = String(payload.submissionId).trim();
@@ -157,7 +160,31 @@ function doPost(e) {
       ? String(payload.roomIdentifier).trim()
       : `${zone}.${building}-${roomNumber}`;
 
-    // 7. Append Row
+    // 7. Process Photo upload to Google Drive Folder (if photoBase64 is present)
+    let photoUrl = '';
+    if (payload.photoBase64 && typeof payload.photoBase64 === 'string' && payload.photoBase64.trim() !== '') {
+      try {
+        const folder = getOrCreatePhotosFolder(scriptProperties);
+        const cleanBase64 = payload.photoBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+        const decodedBytes = Utilities.base64Decode(cleanBase64);
+        const fileName = `${roomIdentifier}_${submissionId}.jpg`;
+        const imageBlob = Utilities.newBlob(decodedBytes, 'image/jpeg', fileName);
+        const file = folder.createFile(imageBlob);
+
+        // Allow anyone with the link to view the photo
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        photoUrl = file.getUrl();
+      } catch (photoErr) {
+        Logger.log('Photo upload error: ' + photoErr.toString());
+        photoUrl = 'Upload error: ' + photoErr.message;
+      }
+    }
+
+    // 8. Build Row and Append to Sheet
+    const photoCell = photoUrl.startsWith('http')
+      ? `=HYPERLINK("${photoUrl}", "Xem ảnh")`
+      : (photoUrl || '');
+
     const newRow = [
       submissionId,
       String(payload.submittedAt || new Date().toISOString()),
@@ -169,6 +196,7 @@ function doPost(e) {
       Number(payload.conditionRating),
       payload.defectNotes ? String(payload.defectNotes) : '',
       payload.photoId ? String(payload.photoId) : '',
+      photoCell,
       payload.photoCapturedAt ? String(payload.photoCapturedAt) : '',
       new Date().toISOString(), // synced_at timestamp
     ];
@@ -181,6 +209,7 @@ function doPost(e) {
       acknowledged: true,
       submissionId: submissionId,
       duplicate: false,
+      photoUrl: photoUrl || null,
       message: 'Survey submission successfully appended to sheet.',
     });
   } catch (err) {
@@ -199,18 +228,13 @@ function doPost(e) {
 
 /**
  * Validates survey submission fields against VKU domain rules.
- * Returns an error string if invalid, or null if valid.
  */
 function validatePayload(payload) {
   if (!payload || typeof payload !== 'object') {
     return 'Payload must be a JSON object.';
   }
 
-  if (
-    !payload.submissionId ||
-    typeof payload.submissionId !== 'string' ||
-    payload.submissionId.trim() === ''
-  ) {
+  if (!payload.submissionId || typeof payload.submissionId !== 'string' || payload.submissionId.trim() === '') {
     return 'Missing required field: submissionId (must be a non-empty UUID string).';
   }
 
@@ -226,11 +250,7 @@ function validatePayload(payload) {
     return 'Missing required field: building.';
   }
 
-  if (
-    !payload.roomNumber ||
-    typeof payload.roomNumber !== 'string' ||
-    payload.roomNumber.trim() === ''
-  ) {
+  if (!payload.roomNumber || typeof payload.roomNumber !== 'string' || payload.roomNumber.trim() === '') {
     return 'Missing required field: roomNumber.';
   }
 
@@ -253,16 +273,44 @@ function validatePayload(payload) {
 function findRowBySubmissionId(sheet, submissionId) {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) {
-    return -1; // Only header or empty
+    return -1;
   }
 
   const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
   for (let i = 0; i < ids.length; i++) {
     if (String(ids[i][0]).trim() === submissionId) {
-      return i + 2; // Row number (1-based, skipping header row 1)
+      return i + 2;
     }
   }
   return -1;
+}
+
+/**
+ * Resolves the Google Drive folder for saving photos.
+ */
+function getOrCreatePhotosFolder(scriptProperties) {
+  const folderId = scriptProperties.getProperty('PHOTOS_FOLDER_ID');
+  if (folderId && folderId.trim() !== '') {
+    try {
+      return DriveApp.getFolderById(folderId.trim());
+    } catch (e) {
+      Logger.log('Configured PHOTOS_FOLDER_ID not found, searching by name...');
+    }
+  }
+
+  const folderName = scriptProperties.getProperty('PHOTOS_FOLDER_NAME') || DEFAULT_FOLDER_NAME;
+  const folders = DriveApp.getFoldersByName(folderName);
+  if (folders.hasNext()) {
+    const f = folders.next();
+    scriptProperties.setProperty('PHOTOS_FOLDER_ID', f.getId());
+    return f;
+  }
+
+  const newFolder = DriveApp.createFolder(folderName);
+  newFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  scriptProperties.setProperty('PHOTOS_FOLDER_ID', newFolder.getId());
+  Logger.log('Created Google Drive folder: ' + folderName + ' (ID: ' + newFolder.getId() + ')');
+  return newFolder;
 }
 
 /**
@@ -276,7 +324,6 @@ function getTargetSheet(scriptProperties) {
   if (spreadsheetId && spreadsheetId.trim() !== '') {
     ss = SpreadsheetApp.openById(spreadsheetId.trim());
   } else {
-    // If bound to a spreadsheet
     ss = SpreadsheetApp.getActiveSpreadsheet();
   }
 
@@ -292,39 +339,56 @@ function getTargetSheet(scriptProperties) {
 }
 
 /**
+ * Ensures header row has all current columns (including photo_url).
+ * If photo_url is missing in an existing sheet, safely inserts it.
+ */
+function ensureHeaderColumns(sheet) {
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(HEADERS);
+    formatHeaderRow(sheet);
+    return;
+  }
+
+  const currentHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const headerStrings = currentHeaders.map(function (h) { return String(h).trim(); });
+
+  // If photo_url is missing, insert column K
+  if (!headerStrings.includes('photo_url')) {
+    const photoIdIndex = headerStrings.indexOf('photo_id');
+    const insertCol = photoIdIndex >= 0 ? photoIdIndex + 2 : sheet.getLastColumn() + 1;
+    sheet.insertColumnAfter(photoIdIndex >= 0 ? photoIdIndex + 1 : sheet.getLastColumn());
+    sheet.getRange(1, insertCol).setValue('photo_url');
+    formatHeaderRow(sheet);
+    Logger.log('Inserted missing "photo_url" column at index ' + insertCol);
+  }
+}
+
+function formatHeaderRow(sheet) {
+  const lastCol = Math.max(sheet.getLastColumn(), HEADERS.length);
+  const headerRange = sheet.getRange(1, 1, 1, lastCol);
+  headerRange.setFontWeight('bold');
+  headerRange.setBackground('#0284C7');
+  headerRange.setFontColor('#FFFFFF');
+  sheet.setFrozenRows(1);
+}
+
+/**
  * Helper function for human setup:
- * Creates worksheet 'SurveyResponses' if missing, writes header row,
- * and freezes top row. Safe to run multiple times (will not overwrite data).
+ * Creates worksheet 'SurveyResponses' and Drive folder 'VKU_Field_Survey_Photos'.
  */
 function setupSheet() {
   const scriptProperties = PropertiesService.getScriptProperties();
   const sheet = getTargetSheet(scriptProperties);
+  ensureHeaderColumns(sheet);
 
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(HEADERS);
-    const headerRange = sheet.getRange(1, 1, 1, HEADERS.length);
-    headerRange.setFontWeight('bold');
-    headerRange.setBackground('#0284C7');
-    headerRange.setFontColor('#FFFFFF');
-    sheet.setFrozenRows(1);
-    sheet.autoResizeColumns(1, HEADERS.length);
-    Logger.log('Setup complete: Header row written to sheet "' + sheet.getName() + '".');
-  } else {
-    Logger.log(
-      'Sheet "' +
-        sheet.getName() +
-        '" already has ' +
-        sheet.getLastRow() +
-        ' rows. No headers modified.'
-    );
-  }
+  const folder = getOrCreatePhotosFolder(scriptProperties);
+  Logger.log('Setup complete: Sheet "' + sheet.getName() + '" and Drive folder "' + folder.getName() + '" are ready.');
 }
 
 /**
- * Helper to build JSON responses with CORS headers.
+ * Helper to build JSON responses.
  */
 function createJsonResponse(data) {
-  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(
-    ContentService.MimeType.JSON
-  );
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
 }

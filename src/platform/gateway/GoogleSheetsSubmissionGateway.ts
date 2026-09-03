@@ -24,6 +24,7 @@ export interface GoogleSheetsSubmissionDto {
   readonly defectNotes: string;
   readonly photoId: string | null;
   readonly photoCapturedAt: string | null;
+  readonly photoBase64?: string | null;
   readonly clientToken?: string;
 }
 
@@ -32,6 +33,7 @@ interface AppsScriptResponse {
   readonly acknowledged?: boolean;
   readonly submissionId?: string;
   readonly duplicate?: boolean;
+  readonly photoUrl?: string | null;
   readonly message?: string;
   readonly error?: {
     readonly code?: string;
@@ -39,7 +41,66 @@ interface AppsScriptResponse {
   };
 }
 
-export const DEFAULT_SUBMISSION_TIMEOUT_MS = 15_000;
+export const DEFAULT_SUBMISSION_TIMEOUT_MS = 25_000;
+
+/**
+ * Converts a Blob to a base64 string, resizing and compressing large images via Canvas if in browser/DOM.
+ */
+export async function convertBlobToBase64(
+  blob: Blob,
+  maxWidth = 1280,
+  quality = 0.8
+): Promise<string> {
+  if (typeof window !== 'undefined' && typeof document !== 'undefined' && typeof Image !== 'undefined') {
+    try {
+      return await new Promise<string>((resolve, reject) => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            rawBlobToBase64(blob).then(resolve, reject);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          const comma = dataUrl.indexOf(',');
+          resolve(comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl);
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          rawBlobToBase64(blob).then(resolve, reject);
+        };
+        img.src = url;
+      });
+    } catch {
+      return rawBlobToBase64(blob);
+    }
+  }
+
+  return rawBlobToBase64(blob);
+}
+
+export async function rawBlobToBase64(blob: Blob): Promise<string> {
+  const arrayBuffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
 
 /**
  * Concrete implementation of SubmissionGateway that dispatches
@@ -67,7 +128,7 @@ export class GoogleSheetsSubmissionGateway implements SubmissionGateway {
       };
     }
 
-    const payload = this.mapToDto(submission);
+    const payload = await this.mapToDto(submission);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -161,13 +222,21 @@ export class GoogleSheetsSubmissionGateway implements SubmissionGateway {
 
   /**
    * Transforms a domain SurveySubmission into the transport DTO.
-   * Note: Photo binary Blob is NEVER serialized into the payload.
-   * Only lightweight photo metadata (photoId, photoCapturedAt) is included.
+   * Compresses photo binary into lightweight base64 string for Drive storage.
    */
-  mapToDto(submission: SurveySubmission): GoogleSheetsSubmissionDto {
+  async mapToDto(submission: SurveySubmission): Promise<GoogleSheetsSubmissionDto> {
     const data = submission.surveyData;
     const derivedRoomIdentifier =
       formatFullRoomIdentifier(data) ?? `${data.zone}.${data.building}-${data.roomNumber}`;
+
+    let photoBase64: string | null = null;
+    if (data.photo && data.photo.binaryData) {
+      try {
+        photoBase64 = await convertBlobToBase64(data.photo.binaryData);
+      } catch {
+        photoBase64 = null;
+      }
+    }
 
     return {
       submissionId: submission.id,
@@ -181,6 +250,7 @@ export class GoogleSheetsSubmissionGateway implements SubmissionGateway {
       defectNotes: data.defectNotes,
       photoId: data.photo?.id ?? null,
       photoCapturedAt: data.photo?.capturedAt ?? null,
+      photoBase64,
       ...(this.clientToken ? { clientToken: this.clientToken } : {}),
     };
   }

@@ -245,7 +245,7 @@ describe('GoogleSheetsSubmissionGateway', () => {
     }
   });
 
-  it('maps DTO correctly with client token when configured', () => {
+  it('maps DTO correctly with client token when configured', async () => {
     const gateway = new GoogleSheetsSubmissionGateway({
       endpointUrl: 'https://script.google.com/macros/s/TEST/exec',
       clientToken: 'my-anti-abuse-token',
@@ -263,13 +263,26 @@ describe('GoogleSheetsSubmissionGateway', () => {
       },
     });
 
-    const dto = gateway.mapToDto(submission);
+    const dto = await gateway.mapToDto(submission);
     expect(dto.zone).toBe('V');
     expect(dto.building).toBe('B');
     expect(dto.roomNumber).toBe('301');
     expect(dto.roomIdentifier).toBe('V.B-301');
     expect(dto.photoId).toBeNull();
     expect(dto.photoCapturedAt).toBeNull();
+    expect(dto.photoBase64).toBeNull();
     expect(dto.clientToken).toBe('my-anti-abuse-token');
+  });
+
+  it('converts photo binary Blob into photoBase64 string in DTO', async () => {
+    const gateway = new GoogleSheetsSubmissionGateway({
+      endpointUrl: 'https://script.google.com/macros/s/TEST/exec',
+    });
+
+    const submission = createMockSubmission();
+    const dto = await gateway.mapToDto(submission);
+    expect(dto.photoId).toBe('photo-uuid-1234');
+    expect(typeof dto.photoBase64).toBe('string');
+    expect(dto.photoBase64!.length).toBeGreaterThan(0);
   });
 });

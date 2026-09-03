@@ -97,24 +97,26 @@ VKU Field Survey Client
    - Click **Allow**.
 6. Switch back to your Google Sheet tab:
    - You will see a worksheet named **`SurveyResponses`** with formatted headers:
-     `submission_id`, `submitted_at`, `zone`, `building`, `room_number`, `room_identifier`, `category`, `condition_rating`, `defect_notes`, `photo_id`, `photo_captured_at`, `synced_at`.
+     `submission_id`, `submitted_at`, `zone`, `building`, `room_number`, `room_identifier`, `category`, `condition_rating`, `defect_notes`, `photo_id`, `photo_url`, `photo_captured_at`, `synced_at`.
+   - A dedicated folder named **`VKU_Field_Survey_Photos`** will be created in your Google Drive to store high-resolution survey inspection photos.
 
 ---
 
-### Step E: Deploy the Web App
+### Step E: Deploy / Update the Web App
 
-1. In the Apps Script editor, click the blue **Deploy** button (top right) $\rightarrow$ **New deployment**.
-2. Click the gear icon next to "Select type" and choose **Web app**.
-3. Configure the deployment settings:
-   - **Description:** `VKU Field Survey Production Ingestion v1`
-   - **Execute as:** **Me (`your-email@gmail.com`)** _(CRITICAL: allows the script to write to your private sheet)_
-   - **Who has access:** **Anyone** _(CRITICAL: allows the PWA and mobile clients to submit)_
-4. Click **Deploy**.
-5. Copy the generated **Web app URL**:
+1. In the Apps Script editor:
+   - If deploying for the first time: Click **Deploy** $\rightarrow$ **New deployment** $\rightarrow$ **Web app**.
+   - If updating existing deployment: Click **Deploy** $\rightarrow$ **Manage deployments** $\rightarrow$ Click the **pencil icon (Edit)** $\rightarrow$ In the **Version** dropdown, choose **New version** $\rightarrow$ Click **Deploy**.
+2. Configure the deployment settings:
+   - **Description:** `VKU Field Survey Production Ingestion v1.1 with Drive Photos`
+   - **Execute as:** **Me (`your-email@gmail.com`)** *(CRITICAL: allows the script to write to your private sheet and Drive)*
+   - **Who has access:** **Anyone** *(CRITICAL: allows the PWA and mobile clients to submit)*
+3. Click **Deploy**.
+4. Copy the generated **Web app URL**:
    ```text
    https://script.google.com/macros/s/AKfycbx.../exec
    ```
-   _(Save this URL — this is your `VITE_SUBMISSION_ENDPOINT`)_.
+   *(Save this URL — this is your `VITE_SUBMISSION_ENDPOINT`)*.
 
 ---
 
@@ -123,10 +125,10 @@ VKU Field Survey Client
 1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com/) $\rightarrow$ **Workers & Pages**.
 2. Select your `vku-field-survey` project.
 3. Go to **Settings** $\rightarrow$ **Environment variables** (or **Variables and Secrets**).
-4. Under **Production**, click **Add variable**:
+4. Under **Production**, click **Add variable** (or edit existing):
    - Variable name: **`VITE_SUBMISSION_ENDPOINT`**
    - Value: `<PASTE_YOUR_WEB_APP_URL>` (e.g. `https://script.google.com/macros/s/.../exec`)
-5. _(Optional)_ If you set a `WRITE_TOKEN` in Step C, also add:
+5. *(Optional)* If you set a `WRITE_TOKEN` in Step C, also add:
    - Variable name: **`VITE_SUBMISSION_CLIENT_TOKEN`**
    - Value: `<YOUR_WRITE_TOKEN>`
 6. Click **Save**.
