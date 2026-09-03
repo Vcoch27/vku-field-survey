@@ -21,6 +21,7 @@ import {
   type SyncTriggerSource,
   WebSyncTriggerAdapter,
 } from '../platform/pwa/WebSyncTriggerAdapter.ts';
+import { GoogleSheetsSubmissionGateway } from '../platform/gateway/GoogleSheetsSubmissionGateway.ts';
 
 export type CombinedSyncTriggerSource = SyncTriggerSource | NativeSyncTriggerSource;
 
@@ -91,13 +92,29 @@ export function createRuntime(options?: CreateRuntimeOptions): AppRuntime {
     options?.networkStatus ??
     (isNative ? new CapacitorNetworkAdapter() : new WebNetworkStatusAdapter(options?.targetWindow));
 
-  const gateway = options?.gateway;
+  const endpointUrl =
+    typeof import.meta !== 'undefined' && import.meta.env
+      ? (import.meta.env.VITE_SUBMISSION_ENDPOINT as string | undefined)
+      : undefined;
+  const clientToken =
+    typeof import.meta !== 'undefined' && import.meta.env
+      ? (import.meta.env.VITE_SUBMISSION_CLIENT_TOKEN as string | undefined)
+      : undefined;
+
+  const gateway: SubmissionGateway | undefined =
+    options?.gateway ??
+    (endpointUrl && endpointUrl.trim() !== ''
+      ? new GoogleSheetsSubmissionGateway({
+          endpointUrl,
+          clientToken,
+        })
+      : undefined);
 
   const handleTrigger = async (source: CombinedSyncTriggerSource) => {
     options?.onSyncAttempt?.(source);
     // M6 single logical synchronization workflow:
     // If a real SubmissionGateway is provided, run the synchronization engine.
-    // If no gateway is configured (OQ-003 destination / OQ-006 protocol-specific positive acknowledgement unresolved), queued items remain PENDING_SYNC.
+    // If no gateway is configured (OQ-003 destination unresolved), queued items remain PENDING_SYNC.
     if (gateway) {
       await synchronizeSubmissions({ storage, gateway });
     }
