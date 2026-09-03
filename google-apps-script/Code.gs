@@ -162,7 +162,11 @@ function doPost(e) {
 
     // 7. Process Photo upload to Google Drive Folder (if photoBase64 is present)
     let photoUrl = '';
-    if (payload.photoBase64 && typeof payload.photoBase64 === 'string' && payload.photoBase64.trim() !== '') {
+    if (
+      payload.photoBase64 &&
+      typeof payload.photoBase64 === 'string' &&
+      payload.photoBase64.trim() !== ''
+    ) {
       try {
         const folder = getOrCreatePhotosFolder(scriptProperties);
         const cleanBase64 = payload.photoBase64.replace(/^data:image\/[a-z]+;base64,/, '');
@@ -249,7 +253,11 @@ function validatePayload(payload) {
     return 'Payload must be a JSON object.';
   }
 
-  if (!payload.submissionId || typeof payload.submissionId !== 'string' || payload.submissionId.trim() === '') {
+  if (
+    !payload.submissionId ||
+    typeof payload.submissionId !== 'string' ||
+    payload.submissionId.trim() === ''
+  ) {
     return 'Missing required field: submissionId (must be a non-empty UUID string).';
   }
 
@@ -265,7 +273,11 @@ function validatePayload(payload) {
     return 'Missing required field: building.';
   }
 
-  if (!payload.roomNumber || typeof payload.roomNumber !== 'string' || payload.roomNumber.trim() === '') {
+  if (
+    !payload.roomNumber ||
+    typeof payload.roomNumber !== 'string' ||
+    payload.roomNumber.trim() === ''
+  ) {
     return 'Missing required field: roomNumber.';
   }
 
@@ -365,7 +377,9 @@ function ensureHeaderColumns(sheet) {
   }
 
   const currentHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const headerStrings = currentHeaders.map(function (h) { return String(h).trim(); });
+  const headerStrings = currentHeaders.map(function (h) {
+    return String(h).trim();
+  });
 
   // If photo_url is missing, insert column K
   if (!headerStrings.includes('photo_url')) {
@@ -397,13 +411,20 @@ function setupSheet() {
   ensureHeaderColumns(sheet);
 
   const folder = getOrCreatePhotosFolder(scriptProperties);
-  Logger.log('Setup complete: Sheet "' + sheet.getName() + '" and Drive folder "' + folder.getName() + '" are ready.');
+  Logger.log(
+    'Setup complete: Sheet "' +
+      sheet.getName() +
+      '" and Drive folder "' +
+      folder.getName() +
+      '" are ready.'
+  );
 }
 
 /**
  * Helper to build JSON responses.
  */
 function createJsonResponse(data) {
-  return ContentService.createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(
+    ContentService.MimeType.JSON
+  );
 }

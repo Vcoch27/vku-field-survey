@@ -109,14 +109,14 @@ VKU Field Survey Client
    - If updating existing deployment: Click **Deploy** $\rightarrow$ **Manage deployments** $\rightarrow$ Click the **pencil icon (Edit)** $\rightarrow$ In the **Version** dropdown, choose **New version** $\rightarrow$ Click **Deploy**.
 2. Configure the deployment settings:
    - **Description:** `VKU Field Survey Production Ingestion v1.1 with Drive Photos`
-   - **Execute as:** **Me (`your-email@gmail.com`)** *(CRITICAL: allows the script to write to your private sheet and Drive)*
-   - **Who has access:** **Anyone** *(CRITICAL: allows the PWA and mobile clients to submit)*
+   - **Execute as:** **Me (`your-email@gmail.com`)** _(CRITICAL: allows the script to write to your private sheet and Drive)_
+   - **Who has access:** **Anyone** _(CRITICAL: allows the PWA and mobile clients to submit)_
 3. Click **Deploy**.
 4. Copy the generated **Web app URL**:
    ```text
    https://script.google.com/macros/s/AKfycbx.../exec
    ```
-   *(Save this URL — this is your `VITE_SUBMISSION_ENDPOINT`)*.
+   _(Save this URL — this is your `VITE_SUBMISSION_ENDPOINT`)_.
 
 ---
 
@@ -128,7 +128,7 @@ VKU Field Survey Client
 4. Under **Production**, click **Add variable** (or edit existing):
    - Variable name: **`VITE_SUBMISSION_ENDPOINT`**
    - Value: `<PASTE_YOUR_WEB_APP_URL>` (e.g. `https://script.google.com/macros/s/.../exec`)
-5. *(Optional)* If you set a `WRITE_TOKEN` in Step C, also add:
+5. _(Optional)_ If you set a `WRITE_TOKEN` in Step C, also add:
    - Variable name: **`VITE_SUBMISSION_CLIENT_TOKEN`**
    - Value: `<YOUR_WRITE_TOKEN>`
 6. Click **Save**.

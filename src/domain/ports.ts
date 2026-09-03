@@ -17,6 +17,8 @@ export interface SurveyStoragePort {
   enqueueSubmission(submission: SurveySubmission): Promise<void>;
   enqueueSubmissionAndClearDraft(submission: SurveySubmission, draftId?: Uuid): Promise<void>;
   getPendingSubmissions(): Promise<readonly SurveySubmission[]>;
+  getAllSubmissions(): Promise<readonly SurveySubmission[]>;
+  getSubmissionById(id: Uuid): Promise<SurveySubmission | null>;
   atomicClaimNext(options?: {
     readonly excludeIds?: ReadonlySet<Uuid>;
   }): Promise<ClaimedSubmission | null>;

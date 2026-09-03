@@ -16,7 +16,7 @@ import { recoverDraft } from '../../domain/recoverDraft';
 import { submitSurveyOffline } from '../../domain/submitSurveyOffline';
 import './SurveyForm.css';
 
-interface SurveyFormProps {
+export interface SurveyFormProps {
   storage: SurveyStoragePort;
   uuidGenerator?: UuidGenerator;
   clock?: Clock;

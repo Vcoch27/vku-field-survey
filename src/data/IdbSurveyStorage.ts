@@ -261,6 +261,43 @@ export class IdbSurveyStorage implements SurveyStoragePort {
     return submissions;
   }
 
+  async getAllSubmissions(): Promise<readonly SurveySubmission[]> {
+    const database = await this.database;
+    const transaction = database.transaction(SUBMISSION_STORE);
+    const submissions: SurveySubmission[] = [];
+    // Open cursor in descending timestamp order ('prev') so newest records appear first
+    let cursor = await transaction.store.index(SUBMISSION_TIMESTAMP_INDEX).openCursor(null, 'prev');
+
+    while (cursor !== null) {
+      if (isCampusZone(cursor.value.surveyData.zone)) {
+        submissions.push(
+          toDomainSubmission(
+            cursor.value as StoredSubmissionRecord & {
+              surveyData: StoredInspectionSnapshot & { zone: CampusZone };
+            }
+          )
+        );
+      }
+      cursor = await cursor.continue();
+    }
+
+    await transaction.done;
+    return submissions;
+  }
+
+  async getSubmissionById(id: Uuid): Promise<SurveySubmission | null> {
+    const database = await this.database;
+    const stored = await database.get(SUBMISSION_STORE, id);
+    if (stored && isCampusZone(stored.surveyData.zone)) {
+      return toDomainSubmission(
+        stored as StoredSubmissionRecord & {
+          surveyData: StoredInspectionSnapshot & { zone: CampusZone };
+        }
+      );
+    }
+    return null;
+  }
+
   async atomicClaimNext(options?: {
     readonly excludeIds?: ReadonlySet<Uuid>;
   }): Promise<ClaimedSubmission | null> {

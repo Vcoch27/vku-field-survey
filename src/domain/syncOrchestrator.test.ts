@@ -31,6 +31,8 @@ describe('SyncOrchestrator (Domain Workflow)', () => {
       enqueueSubmission: vi.fn().mockResolvedValue(undefined),
       enqueueSubmissionAndClearDraft: vi.fn().mockResolvedValue(undefined),
       getPendingSubmissions: vi.fn().mockImplementation(async () => queue),
+      getAllSubmissions: vi.fn().mockImplementation(async () => queue),
+      getSubmissionById: vi.fn().mockImplementation(async (id) => queue.find((s) => s.id === id) ?? null),
       recoverStaleClaims: vi.fn().mockResolvedValue(0),
       atomicClaimNext: vi
         .fn()

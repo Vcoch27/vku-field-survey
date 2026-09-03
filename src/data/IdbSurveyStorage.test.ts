@@ -391,4 +391,38 @@ describe('IdbSurveyStorage', () => {
     expect(stored).toBeDefined();
     expect(stored?.id).toBe('legacy-sub-no-zone');
   });
+
+  it('retrieves all submissions in descending timestamp order', async () => {
+    const older = createSubmission({
+      id: 'sub-older',
+      timestamp: '2026-09-01T10:00:00.000Z',
+      syncStatus: 'PENDING_SYNC',
+    });
+    const newer = createSubmission({
+      id: 'sub-newer',
+      timestamp: '2026-09-02T10:00:00.000Z',
+      syncStatus: 'PENDING_SYNC',
+    });
+
+    await storage.enqueueSubmission(older);
+    await storage.enqueueSubmission(newer);
+    await storage.markSubmissionSynced(older.id);
+
+    const all = await storage.getAllSubmissions();
+    expect(all).toHaveLength(2);
+    expect(all[0].id).toBe('sub-newer');
+    expect(all[1].id).toBe('sub-older');
+  });
+
+  it('retrieves single submission by id or returns null if not found', async () => {
+    const sub = createSubmission({ id: 'target-sub-123' });
+    await storage.enqueueSubmission(sub);
+
+    const found = await storage.getSubmissionById('target-sub-123');
+    expect(found).not.toBeNull();
+    expect(found?.id).toBe('target-sub-123');
+
+    const missing = await storage.getSubmissionById('non-existent-id');
+    expect(missing).toBeNull();
+  });
 });

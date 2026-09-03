@@ -51,7 +51,11 @@ export async function convertBlobToBase64(
   maxWidth = 1280,
   quality = 0.8
 ): Promise<string> {
-  if (typeof window !== 'undefined' && typeof document !== 'undefined' && typeof Image !== 'undefined') {
+  if (
+    typeof window !== 'undefined' &&
+    typeof document !== 'undefined' &&
+    typeof Image !== 'undefined'
+  ) {
     try {
       return await new Promise<string>((resolve, reject) => {
         const url = URL.createObjectURL(blob);

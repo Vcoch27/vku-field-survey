@@ -25,6 +25,8 @@ describe('SurveyForm UI', () => {
       enqueueSubmission: vi.fn().mockResolvedValue(undefined),
       enqueueSubmissionAndClearDraft: vi.fn().mockResolvedValue(undefined),
       getPendingSubmissions: vi.fn().mockResolvedValue([]),
+      getAllSubmissions: vi.fn().mockResolvedValue([]),
+      getSubmissionById: vi.fn().mockResolvedValue(null),
       atomicClaimNext: vi.fn().mockResolvedValue(null),
       recoverStaleClaims: vi.fn().mockResolvedValue(0),
       updateSubmissionStatus: vi.fn().mockResolvedValue(undefined),

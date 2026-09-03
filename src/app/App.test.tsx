@@ -1,13 +1,18 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto';
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import App from './App.tsx';
 import type { AppRuntime } from './createRuntime.ts';
 import type { SurveyStoragePort } from '../domain/ports.ts';
 import type { WebSyncTriggerAdapter } from '../platform/pwa/WebSyncTriggerAdapter.ts';
 
-describe('App Layout & Connectivity UI (PWA Integration)', () => {
+describe('App Shell & Navigation Integration', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   function createMockRuntime(isConnected = true): AppRuntime {
     const mockStorage = {
       getDraft: vi.fn().mockResolvedValue(null),
@@ -16,6 +21,8 @@ describe('App Layout & Connectivity UI (PWA Integration)', () => {
       enqueueSubmission: vi.fn().mockResolvedValue(undefined),
       enqueueSubmissionAndClearDraft: vi.fn().mockResolvedValue(undefined),
       getPendingSubmissions: vi.fn().mockResolvedValue([]),
+      getAllSubmissions: vi.fn().mockResolvedValue([]),
+      getSubmissionById: vi.fn().mockResolvedValue(null),
       atomicClaimNext: vi.fn().mockResolvedValue(null),
       recoverStaleClaims: vi.fn().mockResolvedValue(0),
       updateSubmissionStatus: vi.fn().mockResolvedValue(undefined),
@@ -48,26 +55,54 @@ describe('App Layout & Connectivity UI (PWA Integration)', () => {
     };
   }
 
-  it('renders application header with title and subtitle', async () => {
+  it('renders application header with VKU logo, title, and workspace subtitle', async () => {
     const runtime = createMockRuntime(true);
-    render(<App runtime={runtime} />);
+    render(<App runtime={runtime} initialPath="/" />);
 
     expect(screen.getByText('VKU Field Survey')).toBeTruthy();
-    expect(screen.getByText('Campus Equipment & Facility Inspection')).toBeTruthy();
+    expect(screen.getAllByText('Field Inspection Workspace').length).toBeGreaterThan(0);
+    expect(screen.getByAltText('VKU Field Survey Logo')).toBeTruthy();
 
-    // Online mode: offline badge is absent
     await waitFor(() => {
-      expect(screen.queryByLabelText('Offline Mode')).toBeNull();
+      expect(screen.getByLabelText('Online')).toBeTruthy();
     });
   });
 
   it('renders offline indicator badge when network status is disconnected', async () => {
     const runtime = createMockRuntime(false);
-    render(<App runtime={runtime} />);
+    render(<App runtime={runtime} initialPath="/" />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Offline Mode')).toBeTruthy();
-      expect(screen.getByText('Offline')).toBeTruthy();
+      expect(screen.getByLabelText('Offline')).toBeTruthy();
+    });
+  });
+
+  it('navigates to Survey, Stats, and Records via navigation links', async () => {
+    const user = userEvent.setup();
+    const runtime = createMockRuntime(true);
+    render(<App runtime={runtime} initialPath="/" />);
+
+    // Starts on Home
+    expect(screen.getByText('Local Queue Summary')).toBeTruthy();
+
+    // Click "Start New Survey" button on Home
+    await user.click(screen.getByRole('button', { name: 'Start New Survey' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Submit Inspection' })).toBeTruthy();
+    });
+
+    // Click bottom nav "Stats"
+    const statsNav = screen.getAllByLabelText('Statistics')[0];
+    await user.click(statsNav);
+    await waitFor(() => {
+      expect(screen.getByText('Field Inspection Statistics')).toBeTruthy();
+    });
+
+    // Click bottom nav "Records"
+    const recordsNav = screen.getAllByLabelText('Records')[0];
+    await user.click(recordsNav);
+    await waitFor(() => {
+      expect(screen.getByText('Survey Records')).toBeTruthy();
     });
   });
 });
