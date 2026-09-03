@@ -86,4 +86,22 @@ describe('HomePage', () => {
     expect(screen.getByText('Resume')).toBeTruthy();
     expect(screen.queryByText('Pending sync')).toBeNull();
   });
+
+  it('renders Android APK download action with correct download target', async () => {
+    const mockStorage = {
+      getAllSubmissions: vi.fn().mockResolvedValue([]),
+      getDraft: vi.fn().mockResolvedValue(null),
+    } as unknown as SurveyStoragePort;
+    render(
+      <RouterProvider initialPath="/">
+        <HomePage storage={mockStorage} isConnected />
+      </RouterProvider>
+    );
+    await waitFor(() => {
+      const downloadLink = screen.getByRole('link', { name: /Download Android APK package/i });
+      expect(downloadLink).toBeTruthy();
+      expect(downloadLink.getAttribute('href')).toBe('/downloads/vku-field-survey.apk');
+      expect(downloadLink.getAttribute('download')).toBe('vku-field-survey.apk');
+    });
+  });
 });

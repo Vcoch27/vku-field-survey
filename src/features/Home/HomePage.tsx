@@ -145,6 +145,33 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
         )}
       </section>
 
+      <section className="workflow-section download-section" aria-labelledby="download-title">
+        <div className="section-header-row">
+          <h2 className="section-title" id="download-title">App installation</h2>
+        </div>
+        <div className="download-card">
+          <div className="download-card-body">
+            <div className="download-card-badge">Android APK</div>
+            <strong className="download-card-title">VKU Field Survey for Android</strong>
+            <p className="download-card-desc">
+              Install directly on physical Android phones for full offline queueing and native camera support.
+            </p>
+            <div className="download-actions">
+              <a
+                href="/downloads/vku-field-survey.apk"
+                download="vku-field-survey.apk"
+                className="btn-download-apk"
+                aria-label="Download Android APK package"
+              >
+                <span aria-hidden="true">⬇️</span>
+                <span>Download APK (8.7 MB)</span>
+              </a>
+              <span className="download-hint">Compatible with Android 7.0+ (Nougat) or newer · v1.0.0</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <p className={`connection-note ${isConnected ? 'online' : 'offline'}`} role="status">
         <span aria-hidden="true" />
         {isConnected ? 'Online · synchronization runs automatically' : 'Offline · inspections remain saved on this device'}

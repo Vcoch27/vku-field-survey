@@ -51,6 +51,14 @@ export function Header({ isConnected, pendingCount = 0, failedCount = 0 }: Heade
               </Link>
             );
           })}
+          <a
+            href="/downloads/vku-field-survey.apk"
+            download="vku-field-survey.apk"
+            className="desktop-nav-link nav-download-link"
+            title="Download Android APK package"
+          >
+            ⬇️ APK
+          </a>
         </nav>
 
         {/* Status Indicators */}

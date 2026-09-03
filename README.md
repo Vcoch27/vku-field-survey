@@ -2,7 +2,7 @@
 
 Offline-first campus equipment and facility inspection for the web and Android.
 
-[Open the live PWA](https://vkufieldsurvey.vanhoang.online) · [Requirements](docs/assignment/REQUIREMENTS.md) · [Architecture](docs/architecture/ARCHITECTURE.md) · [Evidence](docs/evidence/README.md)
+[Open the live PWA](https://vkufieldsurvey.vanhoang.online) · [Download Android APK](https://vkufieldsurvey.vanhoang.online/downloads/vku-field-survey.apk) · [Requirements](docs/assignment/REQUIREMENTS.md) · [Architecture](docs/architecture/ARCHITECTURE.md) · [Evidence](docs/evidence/README.md)
 
 ![VKU Field Survey mobile home screen](docs/evidence/m9/m9_1_8_mobile_home.png)
 
@@ -62,6 +62,7 @@ The public deployment is served over HTTPS at [vkufieldsurvey.vanhoang.online](h
 - Installable manifest with standalone display, responsive 192x192 and 512x512 icons, and VKU theme color `#0284C7`.
 - Service-worker App Shell precaching and offline boot/reload support.
 - Capacitor Android wrapper with Camera, Network, and App lifecycle plugins.
+- Pre-built Android package ready for download and installation: [vku-field-survey.apk](https://vkufieldsurvey.vanhoang.online/downloads/vku-field-survey.apk) (v1.0.0, 8.7 MB, Android 7.0+).
 - Responsive layouts verified from narrow mobile widths through desktop widths.
 
 ## Technology stack
