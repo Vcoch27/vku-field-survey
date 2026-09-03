@@ -70,7 +70,7 @@ describe('App Shell & Navigation Integration', () => {
     render(<App runtime={runtime} initialPath="/" />);
 
     expect(screen.getByText('VKU Field Survey')).toBeTruthy();
-    expect(screen.getAllByText('Field Inspection Workspace').length).toBeGreaterThan(0);
+    expect(screen.getByText('Field Inspection')).toBeTruthy();
     expect(screen.getByAltText('VKU Field Survey Logo')).toBeTruthy();
 
     await waitFor(() => {
@@ -93,7 +93,7 @@ describe('App Shell & Navigation Integration', () => {
     render(<App runtime={runtime} initialPath="/" />);
 
     // Starts on Home
-    expect(screen.getByText('Local Queue Summary')).toBeTruthy();
+    expect(screen.getByText('What needs attention next?')).toBeTruthy();
 
     // Click "Start New Survey" button on Home
     await user.click(screen.getByRole('button', { name: 'Start New Survey' }));
@@ -105,14 +105,14 @@ describe('App Shell & Navigation Integration', () => {
     const statsNav = screen.getAllByLabelText('Statistics')[0];
     await user.click(statsNav);
     await waitFor(() => {
-      expect(screen.getByText('Field Inspection Statistics')).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Statistics' })).toBeTruthy();
     });
 
     // Click bottom nav "Records"
     const recordsNav = screen.getAllByLabelText('Records')[0];
     await user.click(recordsNav);
     await waitFor(() => {
-      expect(screen.getByText('Survey Records')).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Records' })).toBeTruthy();
     });
   });
 });

@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { SurveySubmission } from '../../domain/models.ts';
-import type { SurveyStoragePort } from '../../domain/ports.ts';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { InspectionDraft, SurveySubmission } from '../../domain/models.ts';
 import { formatFullRoomIdentifier } from '../../domain/models.ts';
-import { aggregateSubmissions, ZERO_STATUS_COUNTS } from '../../domain/submissionAggregation.ts';
+import type { SurveyStoragePort } from '../../domain/ports.ts';
+import { buildRecordsHref, createSubmissionViewModel } from '../../domain/submissionViewModel.ts';
 import { globalSyncEventHub } from '../../domain/syncEvents.ts';
 import { Link } from '../../app/router.tsx';
 import { useRouter } from '../../app/routerContext.ts';
@@ -12,202 +12,131 @@ export interface HomePageProps {
   readonly isConnected: boolean;
 }
 
+function hasDraftContent(draft: InspectionDraft | null): draft is InspectionDraft {
+  return Boolean(
+    draft &&
+      (draft.zone || draft.building.trim() || draft.roomNumber.trim() || draft.category ||
+        draft.conditionRating || draft.defectNotes.trim() || draft.photo)
+  );
+}
+
+function relativeTime(timestamp: string): string {
+  const elapsedMinutes = Math.max(0, Math.floor((Date.now() - Date.parse(timestamp)) / 60_000));
+  if (elapsedMinutes < 1) return 'just now';
+  if (elapsedMinutes < 60) return `${elapsedMinutes} min ago`;
+  const hours = Math.floor(elapsedMinutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  return new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 export function HomePage({ storage, isConnected }: HomePageProps) {
   const { navigate } = useRouter();
   const [submissions, setSubmissions] = useState<readonly SurveySubmission[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [draft, setDraft] = useState<InspectionDraft | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const loadSubmissions = useCallback(() => {
-    void storage
-      .getAllSubmissions()
-      .then((items) => {
+  const loadWorkspace = useCallback(() => {
+    void Promise.all([storage.getAllSubmissions(), storage.getDraft()])
+      .then(([items, activeDraft]) => {
         setSubmissions(items);
-        setLoading(false);
+        setDraft(activeDraft);
       })
-      .catch(() => {
-        setLoading(false);
-      });
+      .finally(() => setLoading(false));
   }, [storage]);
 
   useEffect(() => {
-    loadSubmissions();
-    const unsub = globalSyncEventHub.subscribeStorage(() => {
-      loadSubmissions();
-    });
-    return unsub;
-  }, [loadSubmissions]);
+    loadWorkspace();
+    return globalSyncEventHub.subscribeStorage(loadWorkspace);
+  }, [loadWorkspace]);
 
-  const counts = submissions.length > 0 ? aggregateSubmissions(submissions) : ZERO_STATUS_COUNTS;
-  const totalCount = counts.total;
-  const pendingCount = counts.pending;
-  const syncedCount = counts.synced;
-  const failedCount = counts.failed;
+  const view = useMemo(() => createSubmissionViewModel(submissions), [submissions]);
+  const activeDraft = hasDraftContent(draft) ? draft : null;
+  const recentRecords = view.records.slice(0, 4);
 
-  const recentRecords = submissions.slice(0, 5);
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
+  const startNewSurvey = async () => {
+    if (activeDraft && !window.confirm(
+      'Start a new inspection? Your unfinished inspection will be removed from this device.'
+    )) return;
+    if (activeDraft) await storage.clearDraft(activeDraft.id);
+    navigate('/survey');
   };
 
   return (
     <div className="page-container home-page">
-      {/* Surveyor Workspace Header */}
-      <section className="home-hero">
-        <div className="home-greeting-badge">
-          <span className="greeting-icon">📋</span>
-          <span>{getGreeting()}</span>
-        </div>
-        <h2 className="home-title">Field Inspection Workspace</h2>
-        <p className="home-subtitle">
-          Carry out room condition surveys and equipment checks across VKU campus.
-        </p>
-
-        {/* Primary CTA */}
-        <button
-          type="button"
-          onClick={() => navigate('/survey')}
-          className="btn-start-survey"
-          aria-label="Start New Survey"
-        >
-          <span className="btn-icon" aria-hidden="true">
-            +
-          </span>
-          <span className="btn-text">Start New Survey</span>
-        </button>
+      <section className="home-intro" aria-labelledby="home-title">
+        <p className="eyebrow">Today&apos;s field work</p>
+        <h1 className="home-title" id="home-title">What needs attention next?</h1>
+        <p className="home-subtitle">Capture inspections, protect work offline, and confirm delivery.</p>
       </section>
 
-      {/* Operational Metrics Cards (Real IndexedDB Data) */}
-      <section className="home-metrics-section" aria-label="Local Survey Metrics">
-        <h3 className="section-title">Local Queue Summary</h3>
-        <div className="metrics-grid">
-          <div className="metric-card">
-            <span className="metric-label">Total</span>
-            <span className="metric-value">{loading ? '—' : totalCount}</span>
-            <span className="metric-desc">recorded</span>
-          </div>
-
-          <div className={`metric-card ${pendingCount > 0 ? 'highlight-pending' : ''}`}>
-            <span className="metric-label">Pending</span>
-            <span className="metric-value">{loading ? '—' : pendingCount}</span>
-            <span className="metric-desc">needs sync</span>
-          </div>
-
-          <div className="metric-card highlight-synced">
-            <span className="metric-label">Synced</span>
-            <span className="metric-value">{loading ? '—' : syncedCount}</span>
-            <span className="metric-desc">in sheet</span>
-          </div>
-
-          {failedCount > 0 && (
-            <div className="metric-card highlight-failed">
-              <span className="metric-label">Failed</span>
-              <span className="metric-value">{loading ? '—' : failedCount}</span>
-              <span className="metric-desc">retryable</span>
+      {activeDraft && (
+        <section className="workflow-section" aria-labelledby="continue-title">
+          <h2 className="section-title" id="continue-title">Continue work</h2>
+          <Link href="/survey" className="continue-card">
+            <div className="continue-card-main">
+              <span className="continue-label">Unfinished inspection</span>
+              <strong>{formatFullRoomIdentifier(activeDraft) ?? 'Location not completed'}</strong>
+              <span>{activeDraft.category ?? 'Category not selected'} · Edited {relativeTime(activeDraft.lastModifiedAt)}</span>
             </div>
-          )}
-        </div>
-      </section>
-
-      {/* Available Survey Forms */}
-      <section className="home-forms-section">
-        <div className="section-header-row">
-          <h3 className="section-title">Available Forms</h3>
-          <Link href="/forms" className="section-link">
-            All forms &rarr;
+            <span className="continue-action">Resume</span>
           </Link>
-        </div>
+        </section>
+      )}
 
-        <div className="form-card">
-          <div className="form-card-badge">Active Form</div>
-          <h4 className="form-card-title">Campus Equipment &amp; Facility Inspection</h4>
-          <p className="form-card-desc">
-            Classroom, lab &amp; office audit for Hardware, Projector, AC, Electrical &amp;
-            Furniture across Khu Hàn (K) &amp; Khu Việt (V).
-          </p>
-          <div className="form-card-tags">
-            <span className="tag">Hardware</span>
-            <span className="tag">Projector</span>
-            <span className="tag">AC</span>
-            <span className="tag">Zone K &amp; V</span>
+      <button type="button" onClick={startNewSurvey} className="btn-start-survey">
+        <span aria-hidden="true">+</span><span>Start New Survey</span>
+      </button>
+
+      {!loading && view.status.needsAttention > 0 && (
+        <section className="workflow-section" aria-labelledby="attention-title">
+          <h2 className="section-title" id="attention-title">Needs attention</h2>
+          <div className="attention-list">
+            {view.status.failed > 0 && (
+              <Link href={buildRecordsHref({ status: 'FAILED' })} className="attention-row danger">
+                <span><strong>{view.status.failed}</strong> failed {view.status.failed === 1 ? 'sync' : 'syncs'}</span><span>Review</span>
+              </Link>
+            )}
+            {view.status.pending > 0 && (
+              <Link href={buildRecordsHref({ status: 'PENDING' })} className="attention-row">
+                <span><strong>{view.status.pending}</strong> waiting to sync</span><span>View</span>
+              </Link>
+            )}
+            {view.status.syncing > 0 && (
+              <Link href={buildRecordsHref({ status: 'SYNCING' })} className="attention-row">
+                <span><strong>{view.status.syncing}</strong> syncing now</span><span>View</span>
+              </Link>
+            )}
           </div>
-          <Link href="/survey" className="btn-form-action">
-            Open Form &rarr;
-          </Link>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* Recent Activity */}
-      <section className="home-recent-section" aria-label="Recent Inspections">
+      <section className="workflow-section" aria-labelledby="recent-title">
         <div className="section-header-row">
-          <h3 className="section-title">Recent Inspections</h3>
-          {submissions.length > 0 && (
-            <Link href="/records" className="section-link">
-              View all ({submissions.length}) &rarr;
-            </Link>
-          )}
+          <h2 className="section-title" id="recent-title">Recent activity</h2>
+          {recentRecords.length > 0 && <Link href="/records" className="section-link">All records</Link>}
         </div>
-
         {loading ? (
-          <div className="loading-card">Loading recent inspections...</div>
+          <div className="loading-card">Loading recent inspections…</div>
         ) : recentRecords.length === 0 ? (
-          <div className="empty-state-card">
-            <span className="empty-icon" aria-hidden="true">
-              📭
-            </span>
+          <div className="empty-state-card compact-empty">
             <p className="empty-title">No inspections recorded yet</p>
-            <p className="empty-desc">
-              Your completed and pending inspection records will appear here automatically.
-            </p>
-            <button type="button" onClick={() => navigate('/survey')} className="btn-outline-small">
-              Start First Survey
-            </button>
+            <p className="empty-desc">Start with the room you are currently inspecting.</p>
           </div>
         ) : (
           <div className="recent-list">
             {recentRecords.map((record) => {
-              const roomId =
-                formatFullRoomIdentifier(record.surveyData) ??
-                `${record.surveyData.zone}.${record.surveyData.building}-${record.surveyData.roomNumber}`;
-              const stars =
-                '★'.repeat(record.surveyData.conditionRating) +
-                '☆'.repeat(5 - record.surveyData.conditionRating);
-
+              const room = formatFullRoomIdentifier(record.surveyData) ?? 'Unknown room';
               return (
-                <Link
-                  key={record.id}
-                  href={`/records/${record.id}`}
-                  className="recent-item-card"
-                  aria-label={`Inspection for room ${roomId}, category ${record.surveyData.category}`}
-                >
+                <Link key={record.id} href={`/records/${record.id}`} className="recent-item-card">
                   <div className="recent-item-main">
-                    <div className="recent-room-badge">{roomId}</div>
-                    <div className="recent-details">
-                      <span className="recent-category">{record.surveyData.category}</span>
-                      <span
-                        className="recent-stars"
-                        title={`Rating: ${record.surveyData.conditionRating} of 5`}
-                      >
-                        {stars}
-                      </span>
-                    </div>
+                    <strong className="recent-room-badge">{room}</strong>
+                    <span className="recent-category">{record.surveyData.category} · {record.surveyData.conditionRating}★</span>
                   </div>
-
                   <div className="recent-item-status">
                     <span className={`status-pill ${record.syncStatus.toLowerCase()}`}>
-                      {record.syncStatus === 'SYNCED'
-                        ? 'Synced'
-                        : record.syncStatus === 'PENDING_SYNC'
-                          ? 'Pending'
-                          : record.syncStatus === 'SYNCING'
-                            ? 'Syncing...'
-                            : 'Failed'}
+                      {record.syncStatus === 'SYNCED' ? 'Synced' : record.syncStatus === 'SYNC_FAILED' ? 'Failed' : record.syncStatus === 'SYNCING' ? 'Syncing' : 'Pending'}
                     </span>
-                    <span className="item-arrow" aria-hidden="true">
-                      &rsaquo;
-                    </span>
+                    <span className="recent-time">{relativeTime(record.timestamp)}</span>
                   </div>
                 </Link>
               );
@@ -216,17 +145,10 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
         )}
       </section>
 
-      {/* Network / Offline Banner Footer */}
-      <section className="home-offline-context">
-        <div className={`status-strip ${isConnected ? 'online' : 'offline'}`}>
-          <span className="status-dot" aria-hidden="true" />
-          <span>
-            {isConnected
-              ? 'Connected to campus network. Survey submissions sync automatically.'
-              : 'Working in Offline Mode. All surveys are preserved durably in local device storage.'}
-          </span>
-        </div>
-      </section>
+      <p className={`connection-note ${isConnected ? 'online' : 'offline'}`} role="status">
+        <span aria-hidden="true" />
+        {isConnected ? 'Online · synchronization runs automatically' : 'Offline · inspections remain saved on this device'}
+      </p>
     </div>
   );
 }

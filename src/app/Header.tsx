@@ -14,7 +14,6 @@ export function Header({ isConnected, pendingCount = 0, failedCount = 0 }: Heade
   const navItems = [
     { label: 'Home', path: '/' },
     { label: 'Survey', path: '/survey' },
-    { label: 'Forms', path: '/forms' },
     { label: 'Stats', path: '/statistics' },
     { label: 'Records', path: '/records' },
   ] as const;
@@ -32,7 +31,7 @@ export function Header({ isConnected, pendingCount = 0, failedCount = 0 }: Heade
           />
           <div className="app-brand-text">
             <span className="app-title">VKU Field Survey</span>
-            <span className="app-subtitle">Field Inspection Workspace</span>
+            <span className="app-subtitle">Field Inspection</span>
           </div>
         </Link>
 
