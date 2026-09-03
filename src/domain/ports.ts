@@ -30,6 +30,8 @@ export interface SurveyStoragePort {
     failureDisposition?: FailureDisposition
   ): Promise<void>;
   markSubmissionSynced(submissionId: Uuid, acknowledgementDetails?: unknown): Promise<void>;
+  deleteSubmission(submissionId: Uuid): Promise<boolean>;
+  resetSubmissionToPending(submissionId: Uuid): Promise<boolean>;
 }
 
 export interface CameraPort {

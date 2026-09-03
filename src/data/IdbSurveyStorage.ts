@@ -395,4 +395,38 @@ export class IdbSurveyStorage implements SurveyStoragePort {
     void acknowledgementDetails;
     return this.updateSubmissionStatus(submissionId, 'SYNCED');
   }
+
+  async deleteSubmission(submissionId: Uuid): Promise<boolean> {
+    const database = await this.database;
+    const transaction = database.transaction(SUBMISSION_STORE, 'readwrite');
+    const existing = await transaction.store.get(submissionId);
+    if (existing === undefined) {
+      await transaction.done;
+      return false;
+    }
+    await transaction.store.delete(submissionId);
+    await transaction.done;
+    return true;
+  }
+
+  async resetSubmissionToPending(submissionId: Uuid): Promise<boolean> {
+    const database = await this.database;
+    const transaction = database.transaction(SUBMISSION_STORE, 'readwrite');
+    const existing = await transaction.store.get(submissionId);
+    if (existing === undefined) {
+      await transaction.done;
+      return false;
+    }
+
+    const resetRecord: StoredSubmissionRecord = {
+      id: existing.id,
+      timestamp: existing.timestamp,
+      surveyData: existing.surveyData,
+      syncStatus: 'PENDING_SYNC',
+    };
+
+    await transaction.store.put(resetRecord);
+    await transaction.done;
+    return true;
+  }
 }

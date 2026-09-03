@@ -10,6 +10,9 @@ import { RecordDetailsPage } from '../features/Records/RecordDetailsPage.tsx';
 import { StatisticsPage } from '../features/Statistics/StatisticsPage.tsx';
 import { SurveyPage } from '../features/SurveyPage/SurveyPage.tsx';
 
+import { aggregateSubmissions, ZERO_STATUS_COUNTS, type SubmissionStatusCounts } from '../domain/submissionAggregation.ts';
+import { globalSyncEventHub } from '../domain/syncEvents.ts';
+
 const defaultRuntime = createRuntime();
 
 export interface AppProps {
@@ -20,43 +23,54 @@ export interface AppProps {
 function AppContent({ runtime }: { readonly runtime: AppRuntime }) {
   const { route } = useRouter();
   const [isConnected, setIsConnected] = useState<boolean>(true);
-  const [pendingCount, setPendingCount] = useState<number>(0);
+  const [statusCounts, setStatusCounts] = useState<SubmissionStatusCounts>(ZERO_STATUS_COUNTS);
 
-  const refreshPendingCount = useCallback(() => {
+  const refreshCounts = useCallback(() => {
     void runtime.storage
       .getAllSubmissions()
       .then((submissions) => {
-        const pending = submissions.filter(
-          (s) => s.syncStatus === 'PENDING_SYNC' || s.syncStatus === 'SYNCING'
-        ).length;
-        setPendingCount(pending);
+        const aggregated = aggregateSubmissions(submissions);
+        setStatusCounts(aggregated);
       })
       .catch(() => {});
   }, [runtime.storage]);
 
   useEffect(() => {
-    refreshPendingCount();
+    refreshCounts();
+
     void runtime.networkStatus.getNetworkStatus().then((status) => {
       setIsConnected(status.isConnected);
     });
-    const unsubscribe = runtime.networkStatus.subscribe((status) => {
+    const unsubNetwork = runtime.networkStatus.subscribe((status) => {
       setIsConnected(status.isConnected);
     });
-    return unsubscribe;
-  }, [runtime, refreshPendingCount]);
+
+    // Reactive subscription to all queue and sync events
+    const unsubStorage = globalSyncEventHub.subscribeStorage(() => {
+      refreshCounts();
+    });
+
+    return () => {
+      unsubNetwork();
+      unsubStorage();
+    };
+  }, [runtime, refreshCounts]);
 
   const handleSubmitted = () => {
-    refreshPendingCount();
+    refreshCounts();
+    globalSyncEventHub.notifyStorageChanged();
     if (typeof runtime.syncTriggerAdapter.requestBackgroundSync === 'function') {
       void runtime.syncTriggerAdapter.requestBackgroundSync();
     }
   };
 
   return (
-    <AppShell isConnected={isConnected} pendingCount={pendingCount}>
-      {route.path === '/' && (
-        <HomePage storage={runtime.storage} isConnected={isConnected} />
-      )}
+    <AppShell
+      isConnected={isConnected}
+      pendingCount={statusCounts.pending}
+      failedCount={statusCounts.failed}
+    >
+      {route.path === '/' && <HomePage storage={runtime.storage} isConnected={isConnected} />}
       {route.path === '/survey' && (
         <SurveyPage
           storage={runtime.storage}
@@ -67,14 +81,16 @@ function AppContent({ runtime }: { readonly runtime: AppRuntime }) {
         />
       )}
       {route.path === '/forms' && <FormsPage />}
-      {route.path === '/statistics' && (
-        <StatisticsPage storage={runtime.storage} />
-      )}
+      {route.path === '/statistics' && <StatisticsPage storage={runtime.storage} />}
       {route.path === '/records' && (
-        <RecordsPage storage={runtime.storage} />
+        <RecordsPage storage={runtime.storage} orchestrator={runtime.syncOrchestrator} />
       )}
       {route.path === '/records/:id' && (
-        <RecordDetailsPage recordId={route.id} storage={runtime.storage} />
+        <RecordDetailsPage
+          recordId={route.id}
+          storage={runtime.storage}
+          orchestrator={runtime.syncOrchestrator}
+        />
       )}
     </AppShell>
   );

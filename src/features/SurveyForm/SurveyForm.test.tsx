@@ -31,6 +31,8 @@ describe('SurveyForm UI', () => {
       recoverStaleClaims: vi.fn().mockResolvedValue(0),
       updateSubmissionStatus: vi.fn().mockResolvedValue(undefined),
       markSubmissionSynced: vi.fn().mockResolvedValue(undefined),
+      deleteSubmission: vi.fn().mockResolvedValue(true),
+      resetSubmissionToPending: vi.fn().mockResolvedValue(true),
     };
   });
 

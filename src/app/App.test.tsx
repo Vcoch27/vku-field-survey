@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import App from './App.tsx';
 import type { AppRuntime } from './createRuntime.ts';
 import type { SurveyStoragePort } from '../domain/ports.ts';
+import type { SyncOrchestrator } from '../domain/syncOrchestrator.ts';
 import type { WebSyncTriggerAdapter } from '../platform/pwa/WebSyncTriggerAdapter.ts';
 
 describe('App Shell & Navigation Integration', () => {
@@ -52,6 +53,15 @@ describe('App Shell & Navigation Integration', () => {
       camera: mockCamera,
       syncTriggerAdapter: mockSyncTriggerAdapter as unknown as WebSyncTriggerAdapter,
       isNative: false,
+      syncOrchestrator: {
+        synchronize: vi.fn().mockResolvedValue({
+          processedCount: 0,
+          syncedCount: 0,
+          failedCount: 0,
+          recoveredStaleCount: 0,
+          errors: [],
+        }),
+      } as unknown as SyncOrchestrator,
     };
   }
 

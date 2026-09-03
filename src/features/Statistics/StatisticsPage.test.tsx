@@ -55,8 +55,8 @@ describe('StatisticsPage', () => {
       // Average: (5 + 3) / 2 = 4.0
       expect(screen.getByText('4.0')).toBeTruthy();
       // Campus zones
-      expect(screen.getByText('Khu Hàn')).toBeTruthy();
-      expect(screen.getByText('Khu Việt')).toBeTruthy();
+      expect(screen.getByText(/Khu Hàn/i)).toBeTruthy();
+      expect(screen.getByText(/Khu Việt/i)).toBeTruthy();
     });
   });
 

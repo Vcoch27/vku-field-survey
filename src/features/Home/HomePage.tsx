@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { SurveySubmission } from '../../domain/models.ts';
 import type { SurveyStoragePort } from '../../domain/ports.ts';
 import { formatFullRoomIdentifier } from '../../domain/models.ts';
+import { aggregateSubmissions, ZERO_STATUS_COUNTS } from '../../domain/submissionAggregation.ts';
+import { globalSyncEventHub } from '../../domain/syncEvents.ts';
 import { Link } from '../../app/router.tsx';
 import { useRouter } from '../../app/routerContext.ts';
 
@@ -15,33 +17,31 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
   const [submissions, setSubmissions] = useState<readonly SurveySubmission[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    let mounted = true;
+  const loadSubmissions = useCallback(() => {
     void storage
       .getAllSubmissions()
       .then((items) => {
-        if (mounted) {
-          setSubmissions(items);
-          setLoading(false);
-        }
+        setSubmissions(items);
+        setLoading(false);
       })
       .catch(() => {
-        if (mounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       });
-
-    return () => {
-      mounted = false;
-    };
   }, [storage]);
 
-  const totalCount = submissions.length;
-  const pendingCount = submissions.filter(
-    (s) => s.syncStatus === 'PENDING_SYNC' || s.syncStatus === 'SYNCING'
-  ).length;
-  const syncedCount = submissions.filter((s) => s.syncStatus === 'SYNCED').length;
-  const failedCount = submissions.filter((s) => s.syncStatus === 'SYNC_FAILED').length;
+  useEffect(() => {
+    loadSubmissions();
+    const unsub = globalSyncEventHub.subscribeStorage(() => {
+      loadSubmissions();
+    });
+    return unsub;
+  }, [loadSubmissions]);
+
+  const counts = submissions.length > 0 ? aggregateSubmissions(submissions) : ZERO_STATUS_COUNTS;
+  const totalCount = counts.total;
+  const pendingCount = counts.pending;
+  const syncedCount = counts.synced;
+  const failedCount = counts.failed;
 
   const recentRecords = submissions.slice(0, 5);
 
@@ -124,7 +124,8 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
           <div className="form-card-badge">Active Form</div>
           <h4 className="form-card-title">Campus Equipment &amp; Facility Inspection</h4>
           <p className="form-card-desc">
-            Classroom, lab &amp; office audit for Hardware, Projector, AC, Electrical &amp; Furniture across Khu Hàn (K) &amp; Khu Việt (V).
+            Classroom, lab &amp; office audit for Hardware, Projector, AC, Electrical &amp;
+            Furniture across Khu Hàn (K) &amp; Khu Việt (V).
           </p>
           <div className="form-card-tags">
             <span className="tag">Hardware</span>
@@ -160,11 +161,7 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
             <p className="empty-desc">
               Your completed and pending inspection records will appear here automatically.
             </p>
-            <button
-              type="button"
-              onClick={() => navigate('/survey')}
-              className="btn-outline-small"
-            >
+            <button type="button" onClick={() => navigate('/survey')} className="btn-outline-small">
               Start First Survey
             </button>
           </div>
@@ -174,7 +171,9 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
               const roomId =
                 formatFullRoomIdentifier(record.surveyData) ??
                 `${record.surveyData.zone}.${record.surveyData.building}-${record.surveyData.roomNumber}`;
-              const stars = '★'.repeat(record.surveyData.conditionRating) + '☆'.repeat(5 - record.surveyData.conditionRating);
+              const stars =
+                '★'.repeat(record.surveyData.conditionRating) +
+                '☆'.repeat(5 - record.surveyData.conditionRating);
 
               return (
                 <Link
@@ -187,7 +186,10 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
                     <div className="recent-room-badge">{roomId}</div>
                     <div className="recent-details">
                       <span className="recent-category">{record.surveyData.category}</span>
-                      <span className="recent-stars" title={`Rating: ${record.surveyData.conditionRating} of 5`}>
+                      <span
+                        className="recent-stars"
+                        title={`Rating: ${record.surveyData.conditionRating} of 5`}
+                      >
                         {stars}
                       </span>
                     </div>

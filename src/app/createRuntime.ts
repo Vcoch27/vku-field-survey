@@ -7,7 +7,7 @@ import type {
   SurveyStoragePort,
   UuidGenerator,
 } from '../domain/ports.ts';
-import { synchronizeSubmissions } from '../domain/syncOrchestrator.ts';
+import { SyncOrchestrator, synchronizeSubmissions } from '../domain/syncOrchestrator.ts';
 import { isNativePlatform } from '../platform/isNative.ts';
 import { CapacitorCameraAdapter } from '../platform/camera/CapacitorCameraAdapter.ts';
 import { WebCameraAdapter } from '../platform/camera/WebCameraAdapter.ts';
@@ -53,6 +53,7 @@ export interface AppRuntime {
   readonly networkStatus: NetworkStatusPort;
   readonly syncTriggerAdapter: SyncTriggerPort;
   readonly isNative: boolean;
+  readonly syncOrchestrator: SyncOrchestrator;
   readonly gateway?: SubmissionGateway;
 }
 
@@ -134,6 +135,16 @@ export function createRuntime(options?: CreateRuntimeOptions): AppRuntime {
         onTrigger: handleTrigger,
       });
 
+  const syncOrchestrator = new SyncOrchestrator({
+    storage,
+    gateway: gateway ?? {
+      sendSubmission: async () => ({
+        outcome: 'RETRYABLE_FAILURE',
+        reason: 'No remote submission gateway configured',
+      }),
+    },
+  });
+
   return {
     storage,
     uuidGenerator,
@@ -142,6 +153,7 @@ export function createRuntime(options?: CreateRuntimeOptions): AppRuntime {
     networkStatus,
     syncTriggerAdapter,
     isNative,
+    syncOrchestrator,
     gateway,
   };
 }

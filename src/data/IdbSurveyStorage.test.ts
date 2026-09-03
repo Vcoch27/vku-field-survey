@@ -425,4 +425,39 @@ describe('IdbSurveyStorage', () => {
     const missing = await storage.getSubmissionById('non-existent-id');
     expect(missing).toBeNull();
   });
+
+  it('deletes an existing submission and returns true, or false if not found', async () => {
+    const sub1 = createSubmission({ id: 'to-delete-1' });
+    const sub2 = createSubmission({ id: 'to-keep-2' });
+    await storage.enqueueSubmission(sub1);
+    await storage.enqueueSubmission(sub2);
+
+    const deleted = await storage.deleteSubmission('to-delete-1');
+    expect(deleted).toBe(true);
+
+    const check1 = await storage.getSubmissionById('to-delete-1');
+    expect(check1).toBeNull();
+
+    const check2 = await storage.getSubmissionById('to-keep-2');
+    expect(check2).not.toBeNull();
+
+    const notFound = await storage.deleteSubmission('to-delete-1');
+    expect(notFound).toBe(false);
+  });
+
+  it('resets a failed submission back to PENDING_SYNC', async () => {
+    const sub = createSubmission({ id: 'failed-sub' });
+    await storage.enqueueSubmission(sub);
+    await storage.updateSubmissionStatus('failed-sub', 'SYNC_FAILED', 'Network error', 'RETRYABLE');
+
+    const failed = await storage.getSubmissionById('failed-sub');
+    expect(failed?.syncStatus).toBe('SYNC_FAILED');
+
+    const reset = await storage.resetSubmissionToPending('failed-sub');
+    expect(reset).toBe(true);
+
+    const updated = await storage.getSubmissionById('failed-sub');
+    expect(updated?.syncStatus).toBe('PENDING_SYNC');
+    expect(updated?.lastErrorMessage).toBeUndefined();
+  });
 });

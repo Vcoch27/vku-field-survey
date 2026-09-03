@@ -1,41 +1,86 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { SurveySubmission } from '../../domain/models.ts';
 import type { SurveyStoragePort } from '../../domain/ports.ts';
 import { formatFullRoomIdentifier } from '../../domain/models.ts';
+import type { SyncOrchestrator } from '../../domain/syncOrchestrator.ts';
+import { deleteLocalSubmission, retrySubmission } from '../../domain/submissionActions.ts';
+import { globalSyncEventHub } from '../../domain/syncEvents.ts';
 import { Link } from '../../app/router.tsx';
 import { useRouter } from '../../app/routerContext.ts';
 
 export interface RecordDetailsPageProps {
   readonly recordId: string;
   readonly storage: SurveyStoragePort;
+  readonly orchestrator?: SyncOrchestrator;
 }
 
-export function RecordDetailsPage({ recordId, storage }: RecordDetailsPageProps) {
+export function RecordDetailsPage({ recordId, storage, orchestrator }: RecordDetailsPageProps) {
   const { navigate } = useRouter();
   const [record, setRecord] = useState<SurveySubmission | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState<boolean>(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
+  const loadRecord = useCallback(() => {
     void storage
       .getSubmissionById(recordId)
       .then((item) => {
-        if (mounted) {
-          setRecord(item);
-          setLoading(false);
-        }
+        setRecord(item);
+        setLoading(false);
       })
       .catch(() => {
-        if (mounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       });
-
-    return () => {
-      mounted = false;
-    };
   }, [recordId, storage]);
+
+  useEffect(() => {
+    loadRecord();
+    const unsub = globalSyncEventHub.subscribeStorage(() => {
+      loadRecord();
+    });
+    return unsub;
+  }, [loadRecord]);
+
+  const handleRetry = async () => {
+    if (!orchestrator || !record) return;
+    setIsRetrying(true);
+    setActionError(null);
+    try {
+      const res = await retrySubmission(record.id, storage, orchestrator);
+      if (!res.success && res.error) {
+        setActionError(res.error);
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Unknown retry failure');
+    } finally {
+      setIsRetrying(false);
+      loadRecord();
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!record) return;
+    const roomId =
+      formatFullRoomIdentifier(record.surveyData) ??
+      `${record.surveyData.zone}.${record.surveyData.building}-${record.surveyData.roomNumber}`;
+
+    const isSynced = record.syncStatus === 'SYNCED';
+    const confirmMsg = isSynced
+      ? `Delete local copy of ${roomId}?\n\nThis removes the local copy only. The synchronized Google Sheet row will remain in remote history.`
+      : `Are you sure you want to permanently delete this inspection for ${roomId}? This cannot be undone.`;
+
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    try {
+      await deleteLocalSubmission(record.id, storage);
+      navigate('/records');
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to delete record');
+    }
+  };
 
   // Object URL lifecycle management for photo Blob
   useEffect(() => {
@@ -81,7 +126,8 @@ export function RecordDetailsPage({ recordId, storage }: RecordDetailsPageProps)
           </span>
           <p className="empty-title">Record not found</p>
           <p className="empty-desc">
-            No inspection record with ID &ldquo;{recordId}&rdquo; was found in this device&apos;s local storage.
+            No inspection record with ID &ldquo;{recordId}&rdquo; was found in this device&apos;s
+            local storage.
           </p>
           <Link href="/records" className="btn-primary-action">
             &larr; Back to Records
@@ -123,6 +169,15 @@ export function RecordDetailsPage({ recordId, storage }: RecordDetailsPageProps)
         </button>
         {getStatusBadge()}
       </div>
+
+      {actionError && (
+        <div className="alert-box alert-error" role="alert">
+          <span>{actionError}</span>
+          <button type="button" className="alert-close" onClick={() => setActionError(null)}>
+            ×
+          </button>
+        </div>
+      )}
 
       <div className="details-card">
         {/* Room Header */}
@@ -175,7 +230,11 @@ export function RecordDetailsPage({ recordId, storage }: RecordDetailsPageProps)
           <div className="detail-item full-width">
             <span className="detail-label">Defect Notes &amp; Observations</span>
             <div className="defect-notes-box">
-              {data.defectNotes ? data.defectNotes : <em className="muted">No defect notes entered.</em>}
+              {data.defectNotes ? (
+                data.defectNotes
+              ) : (
+                <em className="muted">No defect notes entered.</em>
+              )}
             </div>
           </div>
         </div>
@@ -191,7 +250,8 @@ export function RecordDetailsPage({ recordId, storage }: RecordDetailsPageProps)
                 className="inspection-photo"
               />
               <div className="photo-caption">
-                Captured: {data.photo?.capturedAt ? new Date(data.photo.capturedAt).toLocaleString() : 'N/A'}
+                Captured:{' '}
+                {data.photo?.capturedAt ? new Date(data.photo.capturedAt).toLocaleString() : 'N/A'}
               </div>
             </div>
           ) : (
@@ -227,6 +287,28 @@ export function RecordDetailsPage({ recordId, storage }: RecordDetailsPageProps)
               </div>
             )}
           </div>
+        </div>
+
+        {/* Operational Actions */}
+        <div className="details-actions-bar">
+          {record.syncStatus === 'SYNC_FAILED' && (
+            <button
+              type="button"
+              className="btn-details-retry"
+              disabled={isRetrying || record.failureDisposition === 'REQUIRES_ATTENTION'}
+              onClick={handleRetry}
+            >
+              {isRetrying
+                ? 'Retrying Sync...'
+                : record.failureDisposition === 'REQUIRES_ATTENTION'
+                ? 'Review Required'
+                : '🔄 Retry Sync Now'}
+            </button>
+          )}
+
+          <button type="button" className="btn-details-delete" onClick={handleDelete}>
+            🗑️ Delete Local Record
+          </button>
         </div>
       </div>
     </div>

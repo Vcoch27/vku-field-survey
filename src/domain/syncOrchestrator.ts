@@ -1,5 +1,6 @@
 import type { SubmissionGateway, SurveyStoragePort } from './ports.ts';
-import type { Uuid } from './models.ts';
+import { formatFullRoomIdentifier, type Uuid } from './models.ts';
+import { globalSyncEventHub, type SyncEventHub } from './syncEvents.ts';
 
 export interface SyncOrchestratorConfig {
   /**
@@ -13,6 +14,7 @@ export interface SyncOrchestratorDependencies {
   readonly storage: SurveyStoragePort;
   readonly gateway: SubmissionGateway;
   readonly config?: SyncOrchestratorConfig;
+  readonly eventHub?: SyncEventHub;
 }
 
 export interface SyncResult {
@@ -46,6 +48,7 @@ export async function synchronizeSubmissions(
   dependencies: SyncOrchestratorDependencies
 ): Promise<SyncResult> {
   const { storage, gateway, config } = dependencies;
+  const eventHub = dependencies.eventHub ?? globalSyncEventHub;
   const staleTimeoutMs = config?.staleClaimTimeoutMs ?? DEFAULT_STALE_CLAIM_TIMEOUT_MS;
 
   // 1. Recover any stale claims abandoned by dead/crashed execution contexts
@@ -53,6 +56,13 @@ export async function synchronizeSubmissions(
   if (typeof storage.recoverStaleClaims === 'function') {
     recoveredStaleCount = await storage.recoverStaleClaims(staleTimeoutMs);
   }
+
+  let totalEligible = 0;
+  if (typeof storage.getPendingSubmissions === 'function') {
+    const eligibleBefore = await storage.getPendingSubmissions();
+    totalEligible = eligibleBefore.length;
+  }
+  eventHub.notifySyncStart(totalEligible);
 
   let processedCount = 0;
   let syncedCount = 0;
@@ -75,6 +85,16 @@ export async function synchronizeSubmissions(
     const { submission } = claimed;
     attemptedInThisPass.add(submission.id);
     processedCount += 1;
+    const roomName = formatFullRoomIdentifier(submission.surveyData) ?? submission.id.slice(0, 8);
+
+    eventHub.notifyItemProgress({
+      submissionId: submission.id,
+      roomIdentifier: roomName,
+      action: 'uploading',
+      completed: syncedCount,
+      failed: failedCount,
+      total: Math.max(totalEligible, processedCount),
+    });
 
     try {
       const outcome = await gateway.sendSubmission(submission);
@@ -82,11 +102,28 @@ export async function synchronizeSubmissions(
       if (outcome.outcome === 'ACKNOWLEDGED') {
         await storage.markSubmissionSynced(submission.id, outcome.acknowledgementToken);
         syncedCount += 1;
+        eventHub.notifyItemProgress({
+          submissionId: submission.id,
+          roomIdentifier: roomName,
+          action: 'synced',
+          completed: syncedCount,
+          failed: failedCount,
+          total: Math.max(totalEligible, processedCount),
+        });
       } else if (outcome.outcome === 'RETRYABLE_FAILURE') {
         const reason = outcome.reason;
         await storage.updateSubmissionStatus(submission.id, 'SYNC_FAILED', reason, 'RETRYABLE');
         failedCount += 1;
         errors.push({ submissionId: submission.id, reason });
+        eventHub.notifyItemProgress({
+          submissionId: submission.id,
+          roomIdentifier: roomName,
+          action: 'failed',
+          completed: syncedCount,
+          failed: failedCount,
+          total: Math.max(totalEligible, processedCount),
+          error: reason,
+        });
       } else if (outcome.outcome === 'REQUIRES_ATTENTION') {
         const reason = outcome.reason;
         await storage.updateSubmissionStatus(
@@ -97,6 +134,15 @@ export async function synchronizeSubmissions(
         );
         failedCount += 1;
         errors.push({ submissionId: submission.id, reason });
+        eventHub.notifyItemProgress({
+          submissionId: submission.id,
+          roomIdentifier: roomName,
+          action: 'failed',
+          completed: syncedCount,
+          failed: failedCount,
+          total: Math.max(totalEligible, processedCount),
+          error: reason,
+        });
       }
     } catch (dispatchErr) {
       const reason =
@@ -104,16 +150,28 @@ export async function synchronizeSubmissions(
       await storage.updateSubmissionStatus(submission.id, 'SYNC_FAILED', reason, 'RETRYABLE');
       failedCount += 1;
       errors.push({ submissionId: submission.id, reason });
+      eventHub.notifyItemProgress({
+        submissionId: submission.id,
+        roomIdentifier: roomName,
+        action: 'failed',
+        completed: syncedCount,
+        failed: failedCount,
+        total: Math.max(totalEligible, processedCount),
+        error: reason,
+      });
     }
   }
 
-  return {
+  const result: SyncResult = {
     processedCount,
     syncedCount,
     failedCount,
     recoveredStaleCount,
     errors,
   };
+
+  eventHub.notifySyncComplete(result);
+  return result;
 }
 
 export class SyncOrchestrator {

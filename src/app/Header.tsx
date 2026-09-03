@@ -5,9 +5,10 @@ import { useRouter } from './routerContext.ts';
 export interface HeaderProps {
   readonly isConnected: boolean;
   readonly pendingCount?: number;
+  readonly failedCount?: number;
 }
 
-export function Header({ isConnected, pendingCount = 0 }: HeaderProps) {
+export function Header({ isConnected, pendingCount = 0, failedCount = 0 }: HeaderProps) {
   const { route } = useRouter();
 
   const navItems = [
@@ -39,9 +40,7 @@ export function Header({ isConnected, pendingCount = 0 }: HeaderProps) {
         <nav className="desktop-nav" aria-label="Desktop Navigation">
           {navItems.map((item) => {
             const isActive =
-              item.path === '/'
-                ? route.path === '/'
-                : route.path.startsWith(item.path);
+              item.path === '/' ? route.path === '/' : route.path.startsWith(item.path);
             return (
               <Link
                 key={item.path}
@@ -60,12 +59,24 @@ export function Header({ isConnected, pendingCount = 0 }: HeaderProps) {
           {pendingCount > 0 && (
             <Link
               href="/records"
-              className="header-pending-badge"
+              className="header-badge badge-pending"
               title={`${pendingCount} survey(s) waiting for sync`}
               aria-label={`${pendingCount} pending synchronization`}
             >
-              <span className="pending-badge-dot" aria-hidden="true" />
+              <span className="badge-dot pending-dot" aria-hidden="true" />
               <span>{pendingCount} pending</span>
+            </Link>
+          )}
+
+          {failedCount > 0 && (
+            <Link
+              href="/records"
+              className="header-badge badge-failed"
+              title={`${failedCount} survey(s) failed sync and need review`}
+              aria-label={`${failedCount} sync failed`}
+            >
+              <span className="badge-dot failed-dot" aria-hidden="true" />
+              <span>{failedCount} failed</span>
             </Link>
           )}
 
