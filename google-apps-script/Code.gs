@@ -206,7 +206,11 @@ function validatePayload(payload) {
     return 'Payload must be a JSON object.';
   }
 
-  if (!payload.submissionId || typeof payload.submissionId !== 'string' || payload.submissionId.trim() === '') {
+  if (
+    !payload.submissionId ||
+    typeof payload.submissionId !== 'string' ||
+    payload.submissionId.trim() === ''
+  ) {
     return 'Missing required field: submissionId (must be a non-empty UUID string).';
   }
 
@@ -222,7 +226,11 @@ function validatePayload(payload) {
     return 'Missing required field: building.';
   }
 
-  if (!payload.roomNumber || typeof payload.roomNumber !== 'string' || payload.roomNumber.trim() === '') {
+  if (
+    !payload.roomNumber ||
+    typeof payload.roomNumber !== 'string' ||
+    payload.roomNumber.trim() === ''
+  ) {
     return 'Missing required field: roomNumber.';
   }
 
@@ -302,7 +310,13 @@ function setupSheet() {
     sheet.autoResizeColumns(1, HEADERS.length);
     Logger.log('Setup complete: Header row written to sheet "' + sheet.getName() + '".');
   } else {
-    Logger.log('Sheet "' + sheet.getName() + '" already has ' + sheet.getLastRow() + ' rows. No headers modified.');
+    Logger.log(
+      'Sheet "' +
+        sheet.getName() +
+        '" already has ' +
+        sheet.getLastRow() +
+        ' rows. No headers modified.'
+    );
   }
 }
 
@@ -310,6 +324,7 @@ function setupSheet() {
  * Helper to build JSON responses with CORS headers.
  */
 function createJsonResponse(data) {
-  return ContentService.createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(
+    ContentService.MimeType.JSON
+  );
 }

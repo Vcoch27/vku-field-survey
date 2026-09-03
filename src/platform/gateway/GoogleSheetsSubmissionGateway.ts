@@ -1,4 +1,8 @@
-import { formatFullRoomIdentifier, type SubmissionOutcome, type SurveySubmission } from '../../domain/models.ts';
+import {
+  formatFullRoomIdentifier,
+  type SubmissionOutcome,
+  type SurveySubmission,
+} from '../../domain/models.ts';
 import type { SubmissionGateway } from '../../domain/ports.ts';
 
 export interface GoogleSheetsSubmissionGatewayOptions {
@@ -58,7 +62,8 @@ export class GoogleSheetsSubmissionGateway implements SubmissionGateway {
     if (!this.endpointUrl || this.endpointUrl === '') {
       return {
         outcome: 'RETRYABLE_FAILURE',
-        reason: 'Google Sheets submission endpoint URL (VITE_SUBMISSION_ENDPOINT) is not configured.',
+        reason:
+          'Google Sheets submission endpoint URL (VITE_SUBMISSION_ENDPOINT) is not configured.',
       };
     }
 

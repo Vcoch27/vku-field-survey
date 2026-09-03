@@ -35,7 +35,7 @@ VKU Field Survey Client
 
 ## 2. Privacy & Security Boundary
 
-- **Private Google Sheet**: Your Google Sheet must remain **100% PRIVATE**. Never set sheet sharing to *"Anyone with the link can edit"*. The Web App runs with your permissions and writes directly to the private Sheet.
+- **Private Google Sheet**: Your Google Sheet must remain **100% PRIVATE**. Never set sheet sharing to _"Anyone with the link can edit"_. The Web App runs with your permissions and writes directly to the private Sheet.
 - **Client Security**: No Google credentials, API keys, OAuth tokens, or service account files are bundled into the client application.
 - **Web App Access**: Configured with **"Execute as: Me"** and **"Who has access: Anyone"**. This allows surveyors to submit reports without needing a Google Workspace account.
 - **Client Anti-Abuse Token**: An optional `WRITE_TOKEN` can be configured to prevent accidental or stray requests.
@@ -51,7 +51,7 @@ VKU Field Survey Client
    ```text
    https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/edit
    ```
-   *Example:* If the URL is `https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit`, your `SPREADSHEET_ID` is `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms`.
+   _Example:_ If the URL is `https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit`, your `SPREADSHEET_ID` is `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms`.
 3. Keep the sheet **Private** (default sharing). Do not change permissions.
 
 ---
@@ -74,11 +74,11 @@ VKU Field Survey Client
 2. Scroll down to **Script Properties**.
 3. Click **Add script property** and enter:
 
-| Property | Value | Description |
-|---|---|---|
-| `SPREADSHEET_ID` | `<YOUR_SPREADSHEET_ID>` | The ID copied from your Sheet URL |
-| `SHEET_NAME` | `SurveyResponses` | Target worksheet name |
-| `WRITE_TOKEN` | *(Optional)* e.g. `vku-survey-token-2026` | Anti-abuse token (optional) |
+| Property         | Value                                     | Description                       |
+| ---------------- | ----------------------------------------- | --------------------------------- |
+| `SPREADSHEET_ID` | `<YOUR_SPREADSHEET_ID>`                   | The ID copied from your Sheet URL |
+| `SHEET_NAME`     | `SurveyResponses`                         | Target worksheet name             |
+| `WRITE_TOKEN`    | _(Optional)_ e.g. `vku-survey-token-2026` | Anti-abuse token (optional)       |
 
 4. Click **Save script properties**.
 
@@ -107,14 +107,14 @@ VKU Field Survey Client
 2. Click the gear icon next to "Select type" and choose **Web app**.
 3. Configure the deployment settings:
    - **Description:** `VKU Field Survey Production Ingestion v1`
-   - **Execute as:** **Me (`your-email@gmail.com`)** *(CRITICAL: allows the script to write to your private sheet)*
-   - **Who has access:** **Anyone** *(CRITICAL: allows the PWA and mobile clients to submit)*
+   - **Execute as:** **Me (`your-email@gmail.com`)** _(CRITICAL: allows the script to write to your private sheet)_
+   - **Who has access:** **Anyone** _(CRITICAL: allows the PWA and mobile clients to submit)_
 4. Click **Deploy**.
 5. Copy the generated **Web app URL**:
    ```text
    https://script.google.com/macros/s/AKfycbx.../exec
    ```
-   *(Save this URL — this is your `VITE_SUBMISSION_ENDPOINT`)*.
+   _(Save this URL — this is your `VITE_SUBMISSION_ENDPOINT`)_.
 
 ---
 
@@ -126,7 +126,7 @@ VKU Field Survey Client
 4. Under **Production**, click **Add variable**:
    - Variable name: **`VITE_SUBMISSION_ENDPOINT`**
    - Value: `<PASTE_YOUR_WEB_APP_URL>` (e.g. `https://script.google.com/macros/s/.../exec`)
-5. *(Optional)* If you set a `WRITE_TOKEN` in Step C, also add:
+5. _(Optional)_ If you set a `WRITE_TOKEN` in Step C, also add:
    - Variable name: **`VITE_SUBMISSION_CLIENT_TOKEN`**
    - Value: `<YOUR_WRITE_TOKEN>`
 6. Click **Save**.
@@ -136,20 +136,20 @@ VKU Field Survey Client
 
 ## 4. Google Sheet Schema Specification (`SurveyResponses`)
 
-| Col | Field Name | Type | Source Field | Example / Description |
-|---|---|---|---|---|
-| A | `submission_id` | String (UUID) | `submission.id` | `72e7d465-9cda-4e33-8464-7169cee92240` (Unique idempotency key) |
-| B | `submitted_at` | String (ISO 8601) | `submission.timestamp` | `2026-09-03T01:15:12.903Z` |
-| C | `zone` | String | `surveyData.zone` | `K` (Khu Hàn) or `V` (Khu Việt) |
-| D | `building` | String | `surveyData.building` | `A`, `B`, `C`, `D1`, `D2`, `E1`, `E2`, etc. |
-| E | `room_number` | String | `surveyData.roomNumber` | `205`, `301`, etc. (Floor encoded inside room number) |
-| F | `room_identifier` | String | `formatFullRoomIdentifier` | `K.A-205` (VKU standard derived room identifier) |
-| G | `category` | String | `surveyData.category` | `Hardware`, `Projector`, `AC`, `Electrical`, `Furniture` |
-| H | `condition_rating` | Integer (1-5) | `surveyData.conditionRating` | `4` |
-| I | `defect_notes` | String | `surveyData.defectNotes` | `Air conditioner compressor vibrates loudly on high fan speed.` |
-| J | `photo_id` | String (UUID/empty) | `surveyData.photo?.id` | `photo-uuid-1234` (Metadata only; binary Blob stays in IndexedDB) |
-| K | `photo_captured_at` | String (ISO 8601) | `surveyData.photo?.capturedAt` | `2026-09-03T01:14:00.000Z` |
-| L | `synced_at` | String (ISO 8601) | Server generated | `2026-09-03T01:15:15.120Z` (Timestamp when row was inserted) |
+| Col | Field Name          | Type                | Source Field                   | Example / Description                                             |
+| --- | ------------------- | ------------------- | ------------------------------ | ----------------------------------------------------------------- |
+| A   | `submission_id`     | String (UUID)       | `submission.id`                | `72e7d465-9cda-4e33-8464-7169cee92240` (Unique idempotency key)   |
+| B   | `submitted_at`      | String (ISO 8601)   | `submission.timestamp`         | `2026-09-03T01:15:12.903Z`                                        |
+| C   | `zone`              | String              | `surveyData.zone`              | `K` (Khu Hàn) or `V` (Khu Việt)                                   |
+| D   | `building`          | String              | `surveyData.building`          | `A`, `B`, `C`, `D1`, `D2`, `E1`, `E2`, etc.                       |
+| E   | `room_number`       | String              | `surveyData.roomNumber`        | `205`, `301`, etc. (Floor encoded inside room number)             |
+| F   | `room_identifier`   | String              | `formatFullRoomIdentifier`     | `K.A-205` (VKU standard derived room identifier)                  |
+| G   | `category`          | String              | `surveyData.category`          | `Hardware`, `Projector`, `AC`, `Electrical`, `Furniture`          |
+| H   | `condition_rating`  | Integer (1-5)       | `surveyData.conditionRating`   | `4`                                                               |
+| I   | `defect_notes`      | String              | `surveyData.defectNotes`       | `Air conditioner compressor vibrates loudly on high fan speed.`   |
+| J   | `photo_id`          | String (UUID/empty) | `surveyData.photo?.id`         | `photo-uuid-1234` (Metadata only; binary Blob stays in IndexedDB) |
+| K   | `photo_captured_at` | String (ISO 8601)   | `surveyData.photo?.capturedAt` | `2026-09-03T01:14:00.000Z`                                        |
+| L   | `synced_at`         | String (ISO 8601)   | Server generated               | `2026-09-03T01:15:15.120Z` (Timestamp when row was inserted)      |
 
 ### Illustrative Example Row
 

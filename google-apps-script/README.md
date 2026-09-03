@@ -31,19 +31,19 @@ Private Google Spreadsheet ("SurveyResponses" sheet)
 
 ## Sheet Schema (`SurveyResponses`)
 
-| Column | Header | Source Domain Field | Description / Example |
-|---|---|---|---|
-| A | `submission_id` | `submission.id` | Client UUID (Idempotency key, e.g. `72e7d465-...`) |
-| B | `submitted_at` | `submission.timestamp` | ISO timestamp when user submitted (e.g. `2026-09-03T01:15:12.903Z`) |
-| C | `zone` | `surveyData.zone` | Campus Zone: `K` (Khu Hàn) or `V` (Khu Việt) |
-| D | `building` | `surveyData.building` | Building name: `A`, `B`, `C`, `D1`, `D2`, `E1`, `E2`, etc. |
-| E | `room_number` | `surveyData.roomNumber` | Room number (e.g. `205`, `301`) |
-| F | `room_identifier` | `formatFullRoomIdentifier` | Full VKU room ID (e.g. `K.A-205`, `V.B-301`) |
-| G | `category` | `surveyData.category` | `Hardware`, `Projector`, `AC`, `Electrical`, `Furniture` |
-| H | `condition_rating` | `surveyData.conditionRating` | Integer rating: 1 to 5 |
-| I | `defect_notes` | `surveyData.defectNotes` | Free-text survey notes |
-| J | `photo_id` | `surveyData.photo?.id` | Photo attachment UUID (metadata only, or empty) |
-| K | `photo_captured_at` | `surveyData.photo?.capturedAt`| Photo timestamp (or empty) |
-| L | `synced_at` | Server generated | ISO timestamp when record was appended to Sheet |
+| Column | Header              | Source Domain Field            | Description / Example                                               |
+| ------ | ------------------- | ------------------------------ | ------------------------------------------------------------------- |
+| A      | `submission_id`     | `submission.id`                | Client UUID (Idempotency key, e.g. `72e7d465-...`)                  |
+| B      | `submitted_at`      | `submission.timestamp`         | ISO timestamp when user submitted (e.g. `2026-09-03T01:15:12.903Z`) |
+| C      | `zone`              | `surveyData.zone`              | Campus Zone: `K` (Khu Hàn) or `V` (Khu Việt)                        |
+| D      | `building`          | `surveyData.building`          | Building name: `A`, `B`, `C`, `D1`, `D2`, `E1`, `E2`, etc.          |
+| E      | `room_number`       | `surveyData.roomNumber`        | Room number (e.g. `205`, `301`)                                     |
+| F      | `room_identifier`   | `formatFullRoomIdentifier`     | Full VKU room ID (e.g. `K.A-205`, `V.B-301`)                        |
+| G      | `category`          | `surveyData.category`          | `Hardware`, `Projector`, `AC`, `Electrical`, `Furniture`            |
+| H      | `condition_rating`  | `surveyData.conditionRating`   | Integer rating: 1 to 5                                              |
+| I      | `defect_notes`      | `surveyData.defectNotes`       | Free-text survey notes                                              |
+| J      | `photo_id`          | `surveyData.photo?.id`         | Photo attachment UUID (metadata only, or empty)                     |
+| K      | `photo_captured_at` | `surveyData.photo?.capturedAt` | Photo timestamp (or empty)                                          |
+| L      | `synced_at`         | Server generated               | ISO timestamp when record was appended to Sheet                     |
 
 > **Note on Photos:** Photo binary Blobs remain stored durably in the local IndexedDB database. The Google Sheet records photo metadata (`photo_id`, `photo_captured_at`) without storing raw image binary in cells.

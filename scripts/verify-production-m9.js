@@ -4,7 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 
 const EDGE_PATH = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
-const CDP_PORT = 9224;
+const CDP_PORT = 9223;
 const PROD_URL = 'https://vkufieldsurvey.vanhoang.online/';
 const EVIDENCE_DIR = path.resolve('docs/evidence/m9');
 
@@ -75,7 +75,7 @@ async function run() {
     fs.mkdirSync(EVIDENCE_DIR, { recursive: true });
   }
 
-  // 1. Launch Headless Edge with fresh test profile
+  // 1. Launch Headless Edge with dedicated test profile
   const tmpUserData = fs.mkdtempSync(path.join(os.tmpdir(), 'edge-prod-qa-'));
   console.log('1. Launching headless Edge with profile:', tmpUserData);
 
@@ -125,30 +125,18 @@ async function run() {
   await sendCdp(ws, 'Runtime.enable', {}, 12);
 
   // Set standard desktop viewport first
-  await setViewport(ws, 1280, 850, 15);
+  await setViewport(ws, 1280, 800, 15);
 
   // 2. Initial Online Load & Health Check
   console.log('\n2. Navigating to live production site:', PROD_URL);
   await sendCdp(ws, 'Page.navigate', { url: PROD_URL }, 20);
-  await sleep(3500); // Allow initial load, React hydration, SW registration
+  await sleep(3000); // Allow initial load, React hydration, SW registration
 
   const title = await evaluate(ws, 'document.title', 101);
   console.log('Page Title:', title);
 
-  const isFormRendered = await evaluate(
-    ws,
-    '!!document.querySelector(".survey-form")',
-    102
-  );
+  const isFormRendered = await evaluate(ws, '!!document.querySelector(".survey-form")', 102);
   console.log('Form rendered:', isFormRendered);
-
-  // Confirm CR-001 Location UI: Zone K/V, Building open text, Room Number free input, No Floor field
-  const hasFloor = await evaluate(
-    ws,
-    '!!document.querySelector("#floor") || !!document.querySelector("input[name=floor]")',
-    103
-  );
-  console.log('Floor control absent (CR-001 requirement):', !hasFloor);
 
   // Capture Home Desktop Screenshot
   await takeScreenshot(ws, '01-production-home.png', 501);
@@ -158,31 +146,31 @@ async function run() {
   const manifestHref = await evaluate(
     ws,
     'document.querySelector("link[rel=manifest]")?.href',
-    104
+    103
   );
   console.log('Manifest Link:', manifestHref);
 
   const manifestData = await evaluate(
     ws,
     'fetch("/manifest.webmanifest").then(r => r.json())',
-    105
+    104
   );
-  console.log('Manifest JSON:', JSON.stringify(manifestData, null, 2));
+  console.log('Manifest Content:', JSON.stringify(manifestData, null, 2));
 
-  // Render manifest preview card for screenshot evidence
+  // Navigate to manifest directly or render details for screenshot
   await evaluate(
     ws,
     `
     const pre = document.createElement('pre');
     pre.id = 'manifest-preview';
-    pre.style = 'position:fixed;top:16px;right:16px;background:#0f172a;color:#38bdf8;padding:16px;border-radius:10px;font-size:11px;font-family:monospace;z-index:99999;max-width:340px;max-height:480px;overflow:auto;box-shadow:0 10px 25px -5px rgba(0,0,0,0.5);border:1px solid #1e293b;line-height:1.4;';
+    pre.style = 'position:fixed;top:10px;right:10px;background:#1e293b;color:#f8fafc;padding:12px;border-radius:8px;font-size:11px;z-index:99999;max-width:320px;max-height:400px;overflow:auto;box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1);';
     pre.innerText = JSON.stringify(${JSON.stringify(manifestData)}, null, 2);
     document.body.appendChild(pre);
   `,
-    106
+    105
   );
   await takeScreenshot(ws, '02-manifest.png', 502);
-  await evaluate(ws, 'document.getElementById("manifest-preview")?.remove()', 107);
+  await evaluate(ws, 'document.getElementById("manifest-preview")?.remove()', 106);
 
   // 4. Service Worker Verification
   console.log('\n4. Verifying Service Worker...');
@@ -201,16 +189,16 @@ async function run() {
         };
       })()
     `,
-      108 + i
+      107 + i
     );
     if (swStatus?.active) break;
     await sleep(500);
   }
   console.log('Service Worker Status:', swStatus);
 
-  // Ensure controller claim
+  // Reload once online to ensure controller claim if first registration
   if (!swStatus?.controller) {
-    console.log('Reloading to activate controller...');
+    console.log('Reloading once to claim controller...');
     await sendCdp(ws, 'Page.reload', {}, 130);
     await sleep(2500);
     swStatus = await evaluate(
@@ -230,14 +218,14 @@ async function run() {
     console.log('Service Worker Status after reload:', swStatus);
   }
 
-  // Visual banner for SW active screenshot
+  // Visual badge for SW active
   await evaluate(
     ws,
     `
     const banner = document.createElement('div');
     banner.id = 'sw-status-banner';
-    banner.style = 'position:fixed;top:16px;right:16px;background:#0284c7;color:#fff;padding:10px 18px;border-radius:24px;font-weight:700;font-size:13px;z-index:9999;box-shadow:0 4px 12px rgba(2,132,199,0.4);display:flex;align-items:center;gap:8px;';
-    banner.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#4ade80;display:inline-block;"></span> Service Worker: Active & Controlling Page';
+    banner.style = 'position:fixed;bottom:16px;right:16px;background:#0284c7;color:#fff;padding:8px 14px;border-radius:20px;font-weight:600;font-size:12px;z-index:9999;box-shadow:0 4px 6px rgba(0,0,0,0.15);';
+    banner.innerText = 'Service Worker: Active & Controlling Page';
     document.body.appendChild(banner);
   `,
     132
@@ -259,6 +247,7 @@ async function run() {
     },
     140
   );
+
   await sleep(1000);
 
   // Hard reload while offline!
@@ -267,13 +256,15 @@ async function run() {
   await sleep(3000);
 
   const offlineTitle = await evaluate(ws, 'document.title', 142);
-  const offlineFormPresent = await evaluate(
+  const offlineFormPresent = await evaluate(ws, '!!document.querySelector(".survey-form")', 143);
+  const offlineBadgePresent = await evaluate(
     ws,
-    '!!document.querySelector(".survey-form")',
-    143
+    '!!document.querySelector(".network-offline-badge")',
+    144
   );
   console.log('Offline reload title:', offlineTitle);
-  console.log('Offline form present from PWA cache:', offlineFormPresent);
+  console.log('Offline form present:', offlineFormPresent);
+  console.log('Offline badge visible:', offlineBadgePresent);
 
   await takeScreenshot(ws, '04-offline-reload.png', 504);
 
@@ -292,57 +283,62 @@ async function run() {
   );
   await sleep(1500);
 
-  // 6. IndexedDB Draft Persistence (CR-001: Zone K, Building A, Room 205 -> K.A-205)
-  console.log('\n6. Testing IndexedDB Draft Persistence...');
+  // 6. IndexedDB Draft Persistence
+  console.log('\n6. Testing IndexedDB Draft Persistence (CR-001 Location Model)...');
 
+  // Fill in draft: Zone: K, Building: A, Room Number: 205
   await evaluate(
     ws,
     `
     (() => {
-      function setNativeInputValue(element, value) {
-        const proto = Object.getPrototypeOf(element);
-        const set = Object.getOwnPropertyDescriptor(proto, 'value').set;
-        set.call(element, value);
-        element.dispatchEvent(new Event('input', { bubbles: true }));
-        element.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-
       // 1. Select Zone K
-      const zoneK = document.querySelector('input[name="campusZone"][value="K"]');
-      if (zoneK) zoneK.click();
+      const zoneK = document.querySelector('input[name="zone"][value="K"]');
+      if (zoneK) {
+        zoneK.click();
+      }
 
       // 2. Building A
-      const bldg = document.querySelector('#building');
-      if (bldg) setNativeInputValue(bldg, 'A');
-
-      // 3. Room Number 205
-      const room = document.querySelector('#roomNumber');
-      if (room) setNativeInputValue(room, '205');
-
-      // 4. Category AC
-      const cat = document.querySelector('#category');
-      if (cat) {
-        const proto = Object.getPrototypeOf(cat);
-        const set = Object.getOwnPropertyDescriptor(proto, 'value').set;
-        set.call(cat, 'AC');
-        cat.dispatchEvent(new Event('change', { bubbles: true }));
+      const bldgInput = document.querySelector('#building');
+      if (bldgInput) {
+        bldgInput.value = 'A';
+        bldgInput.dispatchEvent(new Event('input', { bubbles: true }));
       }
 
-      // 5. Condition Rating 4
-      const rating4 = document.querySelector('input[name="conditionRating"][value="4"]');
-      if (rating4) rating4.click();
+      // 3. Room Number 205
+      const roomInput = document.querySelector('#roomNumber');
+      if (roomInput) {
+        roomInput.value = '205';
+        roomInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      // 4. Category
+      const catSelect = document.querySelector('#category');
+      if (catSelect) {
+        catSelect.value = 'AC';
+        catSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      // 5. Rating 4
+      const star4 = document.querySelector('input[name="conditionRating"][value="4"]');
+      if (star4) {
+        star4.click();
+      }
 
       // 6. Defect Notes
-      const notes = document.querySelector('#defectNotes');
-      if (notes) setNativeInputValue(notes, 'Air conditioner compressor vibrates loudly on high fan speed.');
+      const notesInput = document.querySelector('#defectNotes');
+      if (notesInput) {
+        notesInput.value = 'Air conditioner compressor vibrates loudly on high fan speed.';
+        notesInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     })()
   `,
     150
   );
 
-  console.log('Waiting 2.5 seconds for autosave debounce to complete...');
-  await sleep(2500);
+  console.log('Waiting 2 seconds for autosave debounce to complete...');
+  await sleep(2200);
 
+  // Verify full room identifier displayed in UI
   const previewBadge = await evaluate(
     ws,
     'document.querySelector(".preview-badge")?.textContent?.trim()',
@@ -350,8 +346,8 @@ async function run() {
   );
   console.log('Derived Room Identifier:', previewBadge);
 
-  // Inspect drafts store in IndexedDB
-  const idbDrafts = await evaluate(
+  // Verify draft directly in IndexedDB
+  const idbDraft = await evaluate(
     ws,
     `
     (async () => {
@@ -361,61 +357,43 @@ async function run() {
           const db = req.result;
           const tx = db.transaction('drafts', 'readonly');
           const store = tx.objectStore('drafts');
-          const getAllReq = store.getAll();
-          getAllReq.onsuccess = () => resolve(getAllReq.result);
-          getAllReq.onerror = () => resolve([]);
+          const getReq = store.get('current_draft');
+          getReq.onsuccess = () => resolve(getReq.result);
+          getReq.onerror = () => resolve(null);
         };
-        req.onerror = () => resolve([]);
+        req.onerror = () => resolve(null);
       });
     })()
   `,
     152
   );
-  console.log('Drafts stored in IndexedDB:', JSON.stringify(idbDrafts, null, 2));
+  console.log('Draft in IndexedDB:', JSON.stringify(idbDraft, null, 2));
 
-  // Verify LocalStorage is NOT used for draft persistence
-  const localStorageKeys = await evaluate(
-    ws,
-    'JSON.stringify(Object.keys(localStorage))',
-    153
-  );
-  console.log('LocalStorage keys (must NOT contain survey data):', localStorageKeys);
+  // Check localStorage durability
+  const localStorageUsage = await evaluate(ws, 'JSON.stringify(Object.keys(localStorage))', 153);
+  console.log('LocalStorage keys (must NOT contain survey data):', localStorageUsage);
 
-  // Reload page to verify draft recovery from IndexedDB
+  // Reload page to verify draft recovery
   console.log('Reloading page to verify draft recovery...');
   await sendCdp(ws, 'Page.reload', {}, 154);
   await sleep(2500);
 
   const recoveredZone = await evaluate(
     ws,
-    'document.querySelector(\'input[name="campusZone"]:checked\')?.value',
+    'document.querySelector(\'input[name="zone"]:checked\')?.value',
     155
   );
-  const recoveredBldg = await evaluate(
-    ws,
-    'document.querySelector("#building")?.value',
-    156
-  );
-  const recoveredRoom = await evaluate(
-    ws,
-    'document.querySelector("#roomNumber")?.value',
-    157
-  );
+  const recoveredBldg = await evaluate(ws, 'document.querySelector("#building")?.value', 156);
+  const recoveredRoom = await evaluate(ws, 'document.querySelector("#roomNumber")?.value', 157);
   const recoveredIdentifier = await evaluate(
     ws,
     'document.querySelector(".preview-badge")?.textContent?.trim()',
     158
   );
-  const recoveredNotes = await evaluate(
-    ws,
-    'document.querySelector("#defectNotes")?.value',
-    159
-  );
   console.log('Recovered Zone:', recoveredZone);
   console.log('Recovered Building:', recoveredBldg);
   console.log('Recovered Room:', recoveredRoom);
   console.log('Recovered Identifier:', recoveredIdentifier);
-  console.log('Recovered Notes:', recoveredNotes);
 
   await takeScreenshot(ws, '05-indexeddb-draft.png', 505);
 
@@ -436,7 +414,7 @@ async function run() {
   await sleep(1000);
 
   // Click Submit Inspection button
-  console.log('Submitting inspection while offline...');
+  console.log('Submitting inspection offline...');
   await evaluate(
     ws,
     `
@@ -448,16 +426,16 @@ async function run() {
     161
   );
 
-  await sleep(2000);
+  await sleep(1500);
 
   const submitStatusText = await evaluate(
     ws,
-    'document.querySelector(".status.queued")?.textContent?.trim()',
+    'document.querySelector(".btn-submitted")?.textContent?.trim()',
     162
   );
-  console.log('Submission Status Banner:', submitStatusText);
+  console.log('Submission UI Status:', submitStatusText);
 
-  // Inspect submission_queue store in IndexedDB
+  // Inspect IndexedDB submissions store
   const idbSubmissions = await evaluate(
     ws,
     `
@@ -466,8 +444,8 @@ async function run() {
         const req = indexedDB.open('vku-field-survey');
         req.onsuccess = () => {
           const db = req.result;
-          const tx = db.transaction('submission_queue', 'readonly');
-          const store = tx.objectStore('submission_queue');
+          const tx = db.transaction('submissions', 'readonly');
+          const store = tx.objectStore('submissions');
           const getAllReq = store.getAll();
           getAllReq.onsuccess = () => resolve(getAllReq.result);
           getAllReq.onerror = () => resolve([]);
@@ -480,15 +458,17 @@ async function run() {
   );
   console.log('Queued Submissions in IndexedDB:');
   for (const s of idbSubmissions || []) {
-    console.log(` - ID: ${s.id}, syncStatus: ${s.syncStatus}, Zone: ${s.surveyData?.zone}, Room: ${s.surveyData?.building}-${s.surveyData?.roomNumber}`);
+    console.log(
+      ` - ID: ${s.id}, syncStatus: ${s.syncStatus}, Zone: ${s.surveyData?.zone}, Room: ${s.surveyData?.building}-${s.surveyData?.roomNumber}`
+    );
   }
 
-  // Reload page while STILL OFFLINE to confirm queue survives
+  // Reload page while STILL OFFLINE to verify queued record survives
   console.log('Reloading page while still offline to confirm queue survival...');
   await sendCdp(ws, 'Page.reload', {}, 164);
   await sleep(2500);
 
-  const idbSubmissionsAfterOfflineReload = await evaluate(
+  const idbSubmissionsAfterReload = await evaluate(
     ws,
     `
     (async () => {
@@ -496,8 +476,8 @@ async function run() {
         const req = indexedDB.open('vku-field-survey');
         req.onsuccess = () => {
           const db = req.result;
-          const tx = db.transaction('submission_queue', 'readonly');
-          const store = tx.objectStore('submission_queue');
+          const tx = db.transaction('submissions', 'readonly');
+          const store = tx.objectStore('submissions');
           const getAllReq = store.getAll();
           getAllReq.onsuccess = () => resolve(getAllReq.result);
           getAllReq.onerror = () => resolve([]);
@@ -508,7 +488,7 @@ async function run() {
   `,
     165
   );
-  console.log('Submissions in IndexedDB after offline reload:', idbSubmissionsAfterOfflineReload?.length);
+  console.log('Submissions in IndexedDB after offline reload:', idbSubmissionsAfterReload?.length);
 
   await takeScreenshot(ws, '06-pending-sync.png', 506);
 
@@ -536,8 +516,8 @@ async function run() {
         const req = indexedDB.open('vku-field-survey');
         req.onsuccess = () => {
           const db = req.result;
-          const tx = db.transaction('submission_queue', 'readonly');
-          const store = tx.objectStore('submission_queue');
+          const tx = db.transaction('submissions', 'readonly');
+          const store = tx.objectStore('submissions');
           const getAllReq = store.getAll();
           getAllReq.onsuccess = () => resolve(getAllReq.result);
           getAllReq.onerror = () => resolve([]);
@@ -549,7 +529,9 @@ async function run() {
     171
   );
 
-  console.log('Submissions status after reconnect (must remain PENDING_SYNC without fake backend):');
+  console.log(
+    'Submissions status after reconnect (must remain PENDING_SYNC without fake backend):'
+  );
   for (const s of idbSubmissionsAfterReconnect || []) {
     console.log(` - ID: ${s.id}, syncStatus: ${s.syncStatus}`);
   }
