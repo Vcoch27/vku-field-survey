@@ -3,11 +3,12 @@ export type AppRoute =
   | { readonly path: '/survey' }
   | { readonly path: '/forms' }
   | { readonly path: '/statistics' }
-  | { readonly path: '/records' }
+  | { readonly path: '/records'; readonly query: string }
   | { readonly path: '/records/:id'; readonly id: string };
 
 export function parseRoute(rawPath: string): AppRoute {
-  const clean = rawPath.replace(/\/+$/, '') || '/';
+  const [rawPathname, rawQuery = ''] = rawPath.split('?', 2);
+  const clean = rawPathname.replace(/\/+$/, '') || '/';
 
   if (clean === '/' || clean === '') {
     return { path: '/' };
@@ -22,14 +23,14 @@ export function parseRoute(rawPath: string): AppRoute {
     return { path: '/statistics' };
   }
   if (clean === '/records') {
-    return { path: '/records' };
+    return { path: '/records', query: rawQuery };
   }
   if (clean.startsWith('/records/')) {
     const id = clean.slice('/records/'.length).trim();
     if (id) {
       return { path: '/records/:id', id };
     }
-    return { path: '/records' };
+    return { path: '/records', query: '' };
   }
 
   return { path: '/' };
@@ -43,5 +44,5 @@ export function getCurrentPath(loc?: Location): string {
     return l.hash.slice(1);
   }
 
-  return l.pathname || '/';
+  return `${l.pathname || '/'}${l.search}`;
 }

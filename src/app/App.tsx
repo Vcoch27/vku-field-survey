@@ -10,7 +10,8 @@ import { RecordDetailsPage } from '../features/Records/RecordDetailsPage.tsx';
 import { StatisticsPage } from '../features/Statistics/StatisticsPage.tsx';
 import { SurveyPage } from '../features/SurveyPage/SurveyPage.tsx';
 
-import { aggregateSubmissions, ZERO_STATUS_COUNTS, type SubmissionStatusCounts } from '../domain/submissionAggregation.ts';
+import { ZERO_STATUS_COUNTS, type SubmissionStatusCounts } from '../domain/submissionAggregation.ts';
+import { createSubmissionViewModel } from '../domain/submissionViewModel.ts';
 import { globalSyncEventHub } from '../domain/syncEvents.ts';
 
 const defaultRuntime = createRuntime();
@@ -29,8 +30,7 @@ function AppContent({ runtime }: { readonly runtime: AppRuntime }) {
     void runtime.storage
       .getAllSubmissions()
       .then((submissions) => {
-        const aggregated = aggregateSubmissions(submissions);
-        setStatusCounts(aggregated);
+        setStatusCounts(createSubmissionViewModel(submissions).status);
       })
       .catch(() => {});
   }, [runtime.storage]);
@@ -83,7 +83,12 @@ function AppContent({ runtime }: { readonly runtime: AppRuntime }) {
       {route.path === '/forms' && <FormsPage />}
       {route.path === '/statistics' && <StatisticsPage storage={runtime.storage} />}
       {route.path === '/records' && (
-        <RecordsPage storage={runtime.storage} orchestrator={runtime.syncOrchestrator} />
+        <RecordsPage
+          key={route.query}
+          storage={runtime.storage}
+          orchestrator={runtime.syncOrchestrator}
+          initialQuery={route.query}
+        />
       )}
       {route.path === '/records/:id' && (
         <RecordDetailsPage

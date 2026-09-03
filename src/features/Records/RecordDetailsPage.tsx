@@ -204,10 +204,6 @@ export function RecordDetailsPage({ recordId, storage, orchestrator }: RecordDet
               <span className="detail-label">Room Number</span>
               <span className="detail-value">{data.roomNumber}</span>
             </div>
-            <div className="detail-item">
-              <span className="detail-label">Canonical Room ID</span>
-              <span className="detail-value">{roomId}</span>
-            </div>
           </div>
         </div>
 
@@ -264,21 +260,25 @@ export function RecordDetailsPage({ recordId, storage, orchestrator }: RecordDet
           )}
         </div>
 
-        {/* Sync & Persistence Metadata */}
+        {/* Record history */}
         <div className="details-section metadata-section">
-          <h3 className="section-heading">Record Metadata</h3>
+          <h3 className="section-heading">Record History</h3>
           <div className="metadata-list">
             <div className="meta-row">
-              <span className="meta-k">Submission ID:</span>
-              <span className="meta-v code-text">{record.id}</span>
-            </div>
-            <div className="meta-row">
-              <span className="meta-k">Recorded At:</span>
+              <span className="meta-k">Recorded:</span>
               <span className="meta-v">{new Date(record.timestamp).toLocaleString()}</span>
             </div>
             <div className="meta-row">
-              <span className="meta-k">Sync Status:</span>
-              <span className="meta-v">{record.syncStatus}</span>
+              <span className="meta-k">Delivery:</span>
+              <span className="meta-v">
+                {record.syncStatus === 'SYNCED'
+                  ? 'Synchronized with Google Sheets'
+                  : record.syncStatus === 'SYNC_FAILED'
+                    ? 'Synchronization failed'
+                    : record.syncStatus === 'SYNCING'
+                      ? 'Synchronizing now'
+                      : 'Waiting for synchronization'}
+              </span>
             </div>
             {record.lastErrorMessage && (
               <div className="meta-row error-meta">
@@ -301,8 +301,8 @@ export function RecordDetailsPage({ recordId, storage, orchestrator }: RecordDet
               {isRetrying
                 ? 'Retrying Sync...'
                 : record.failureDisposition === 'REQUIRES_ATTENTION'
-                ? 'Review Required'
-                : '🔄 Retry Sync Now'}
+                  ? 'Review Required'
+                  : '🔄 Retry Sync Now'}
             </button>
           )}
 

@@ -12,7 +12,11 @@ describe('Router', () => {
     expect(parseRoute('/survey')).toEqual({ path: '/survey' });
     expect(parseRoute('/forms')).toEqual({ path: '/forms' });
     expect(parseRoute('/statistics')).toEqual({ path: '/statistics' });
-    expect(parseRoute('/records')).toEqual({ path: '/records' });
+    expect(parseRoute('/records')).toEqual({ path: '/records', query: '' });
+    expect(parseRoute('/records?status=FAILED&zone=V')).toEqual({
+      path: '/records',
+      query: 'status=FAILED&zone=V',
+    });
     expect(parseRoute('/records/sub-123')).toEqual({ path: '/records/:id', id: 'sub-123' });
     expect(parseRoute('/unknown-route')).toEqual({ path: '/' });
   });
