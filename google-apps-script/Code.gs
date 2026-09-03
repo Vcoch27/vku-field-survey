@@ -180,11 +180,7 @@ function doPost(e) {
       }
     }
 
-    // 8. Build Row and Append to Sheet
-    const photoCell = photoUrl.startsWith('http')
-      ? `=HYPERLINK("${photoUrl}", "Xem ảnh")`
-      : (photoUrl || '');
-
+    // 8. Build Row and Append to Sheet (uses direct photoUrl initially, then applies RichText)
     const newRow = [
       submissionId,
       String(payload.submittedAt || new Date().toISOString()),
@@ -196,12 +192,31 @@ function doPost(e) {
       Number(payload.conditionRating),
       payload.defectNotes ? String(payload.defectNotes) : '',
       payload.photoId ? String(payload.photoId) : '',
-      photoCell,
+      photoUrl || '',
       payload.photoCapturedAt ? String(payload.photoCapturedAt) : '',
       new Date().toISOString(), // synced_at timestamp
     ];
 
     sheet.appendRow(newRow);
+
+    // 9. Format photo_url cell as clickable RichText "Xem ảnh" (avoids formula syntax #ERROR! in non-US locales)
+    if (photoUrl && photoUrl.startsWith('http')) {
+      try {
+        const lastRow = sheet.getLastRow();
+        const currentHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+        const photoCol = currentHeaders.indexOf('photo_url') + 1;
+        if (photoCol > 0) {
+          const richText = SpreadsheetApp.newRichTextValue()
+            .setText('Xem ảnh')
+            .setLinkUrl(photoUrl)
+            .build();
+          sheet.getRange(lastRow, photoCol).setRichTextValue(richText);
+        }
+      } catch (richTextErr) {
+        Logger.log('RichText format note: ' + richTextErr.toString());
+      }
+    }
+
     SpreadsheetApp.flush();
 
     return createJsonResponse({
