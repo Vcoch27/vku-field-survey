@@ -4,6 +4,13 @@ const config: CapacitorConfig = {
   appId: 'com.vku.fieldsurvey',
   appName: 'VKU Field Survey',
   webDir: 'dist',
+  plugins: {
+    CapacitorUpdater: {
+      appId: 'com.vku.field.survey.vku.field.survey',
+      autoUpdate: 'atBackground',
+      defaultChannel: 'production',
+    },
+  },
 };
 
 export default config;
