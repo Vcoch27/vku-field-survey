@@ -288,4 +288,53 @@ describe('SyncOrchestrator (Domain Workflow)', () => {
     // Both attempts dispatched the EXACT same stable client UUID
     expect(receivedIds).toEqual(['stable-uuid-99', 'stable-uuid-99']);
   });
+
+  it('triggers inbound pull and calls storage.reconcileRemoteSubmissions when supported', async () => {
+    const sub = createFakeSubmission('sub-1', '2026-09-02T10:00:00.000Z');
+    const { storage } = createMockStorage([sub]);
+
+    storage.reconcileRemoteSubmissions = vi.fn().mockResolvedValue({
+      deletedCount: 1,
+      importedCount: 2,
+      totalRemoteCount: 3,
+    });
+
+    const gateway: SubmissionGateway = {
+      sendSubmission: vi.fn().mockResolvedValue({ outcome: 'ACKNOWLEDGED' }),
+      fetchRemoteSubmissions: vi.fn().mockResolvedValue({
+        success: true,
+        submissions: [
+          {
+            submissionId: 'sub-1',
+            submittedAt: '2026-09-02T10:00:00.000Z',
+            zone: 'K',
+            building: 'A',
+            roomNumber: '201',
+            roomIdentifier: 'K.A-201',
+            category: 'Hardware',
+            conditionRating: 4,
+            defectNotes: '',
+            photoId: null,
+            photoUrl: null,
+            photoCapturedAt: null,
+            latitude: null,
+            longitude: null,
+            gpsAccuracy: null,
+          },
+        ],
+      }),
+    };
+
+    const result = await synchronizeSubmissions({ storage, gateway });
+    expect(result.syncedCount).toBe(1);
+    expect(gateway.fetchRemoteSubmissions).toHaveBeenCalled();
+    expect(storage.reconcileRemoteSubmissions).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ submissionId: 'sub-1' })])
+    );
+    expect(result.reconciliation).toEqual({
+      deletedCount: 1,
+      importedCount: 2,
+      totalRemoteCount: 3,
+    });
+  });
 });

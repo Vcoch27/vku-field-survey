@@ -75,6 +75,8 @@ export function RecordsPage({ storage, orchestrator, initialQuery }: RecordsPage
   const [filters, setFilters] = useState<RecordFilters>(() => parseFilters(initialQuery));
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   const loadRecords = useCallback(() => {
     void storage.getAllSubmissions().then(setRecords).finally(() => setLoading(false));
@@ -97,6 +99,34 @@ export function RecordsPage({ storage, orchestrator, initialQuery }: RecordsPage
 
   const setFilter = <K extends keyof RecordFilters>(key: K, value: RecordFilters[K]) => {
     setFilters((current) => ({ ...current, [key]: value }));
+  };
+
+  const handleSyncCloud = async () => {
+    if (!orchestrator) {
+      setActionError('Synchronization is unavailable in the current runtime.');
+      return;
+    }
+    setIsSyncingCloud(true);
+    setActionError(null);
+    setSyncFeedback(null);
+    try {
+      const result = await orchestrator.synchronize();
+      loadRecords();
+      if (result.reconciliation) {
+        const { deletedCount, importedCount, totalRemoteCount } = result.reconciliation;
+        setSyncFeedback(
+          `Cloud sync complete (${totalRemoteCount} on Sheet): ${deletedCount} deleted, ${importedCount} imported.`
+        );
+      } else if (result.syncedCount > 0) {
+        setSyncFeedback(`Successfully synchronized ${result.syncedCount} inspection(s).`);
+      } else {
+        setSyncFeedback('Records are up to date with Google Sheets.');
+      }
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Cloud synchronization failed.');
+    } finally {
+      setIsSyncingCloud(false);
+    }
   };
 
   const handleRetry = async (record: SurveySubmission, event: MouseEvent<HTMLButtonElement>) => {
@@ -141,8 +171,27 @@ export function RecordsPage({ storage, orchestrator, initialQuery }: RecordsPage
           <h1 className="page-title">Records</h1>
           <p className="page-subtitle">Review submitted inspections and resolve delivery issues.</p>
         </div>
-        <button type="button" onClick={() => navigate('/survey')} className="btn-new-record">+ New</button>
+        <div className="header-actions">
+          <button
+            type="button"
+            onClick={handleSyncCloud}
+            disabled={isSyncingCloud}
+            className="btn-sync-cloud"
+            aria-label="Sync with Google Sheets and reconcile records"
+            title="Synchronize with Google Sheets"
+          >
+            {isSyncingCloud ? '🔄 Syncing…' : '🔄 Sync Cloud'}
+          </button>
+          <button type="button" onClick={() => navigate('/survey')} className="btn-new-record">+ New</button>
+        </div>
       </header>
+
+      {syncFeedback && (
+        <div className="alert-box alert-success" role="status">
+          <span>{syncFeedback}</span>
+          <button type="button" className="alert-close" aria-label="Dismiss message" onClick={() => setSyncFeedback(null)}>×</button>
+        </div>
+      )}
 
       {actionError && <div className="alert-box alert-error" role="alert"><span>{actionError}</span><button type="button" className="alert-close" aria-label="Dismiss error" onClick={() => setActionError(null)}>×</button></div>}
 

@@ -28,6 +28,9 @@ const HEADERS = [
   'photo_url',
   'photo_captured_at',
   'synced_at',
+  'latitude',
+  'longitude',
+  'gps_accuracy',
 ];
 
 const VALID_CATEGORIES = ['Hardware', 'Projector', 'AC', 'Electrical', 'Furniture'];
@@ -35,15 +38,149 @@ const VALID_ZONES = ['K', 'V'];
 const VALID_RATINGS = [1, 2, 3, 4, 5];
 
 /**
- * Health check endpoint for testing Web App availability.
+ * GET Endpoint: Health check & List records for Cloud-to-Device Reconciliation.
  */
 function doGet(e) {
+  const action = e && e.parameter && e.parameter.action;
+
+  if (action === 'list_records' || action === 'get_submissions') {
+    return handleListRecords(e);
+  }
+
   return createJsonResponse({
     ok: true,
     service: 'VKU Field Survey Submission Endpoint',
-    version: '1.1.0',
+    version: '1.2.0',
     timestamp: new Date().toISOString(),
   });
+}
+
+/**
+ * Handles fetching all active survey submissions from Google Sheets.
+ */
+function handleListRecords(e) {
+  try {
+    const scriptProperties = PropertiesService.getScriptProperties();
+    const expectedToken = scriptProperties.getProperty('WRITE_TOKEN');
+    if (expectedToken && expectedToken.trim() !== '') {
+      const clientToken = e && e.parameter && e.parameter.token;
+      if (clientToken !== expectedToken) {
+        return createJsonResponse({
+          ok: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Invalid client token.',
+          },
+        });
+      }
+    }
+
+    const sheet = getTargetSheet(scriptProperties);
+    if (!sheet) {
+      return createJsonResponse({
+        ok: false,
+        error: {
+          code: 'SHEET_NOT_FOUND',
+          message: 'Target worksheet not found.',
+        },
+      });
+    }
+
+    ensureHeaderColumns(sheet);
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return createJsonResponse({
+        ok: true,
+        submissions: [],
+        total: 0,
+      });
+    }
+
+    const lastCol = sheet.getLastColumn();
+    const headerRange = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    const dataRange = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+
+    const colMap = {};
+    for (let i = 0; i < headerRange.length; i++) {
+      colMap[String(headerRange[i]).trim()] = i;
+    }
+
+    const submissions = [];
+    for (let r = 0; r < dataRange.length; r++) {
+      const row = dataRange[r];
+      const submissionIdCol = colMap['submission_id'];
+      const submissionId = submissionIdCol !== undefined ? String(row[submissionIdCol] || '').trim() : '';
+
+      if (!submissionId) continue;
+
+      const getVal = function(colName) {
+        const idx = colMap[colName];
+        return idx !== undefined ? row[idx] : null;
+      };
+
+      const submittedAtVal = getVal('submitted_at');
+      const submittedAtStr = submittedAtVal instanceof Date
+        ? submittedAtVal.toISOString()
+        : String(submittedAtVal || new Date().toISOString());
+
+      const photoCapturedAtVal = getVal('photo_captured_at');
+      const photoCapturedAtStr = photoCapturedAtVal instanceof Date
+        ? photoCapturedAtVal.toISOString()
+        : (photoCapturedAtVal ? String(photoCapturedAtVal) : null);
+
+      let photoUrl = getVal('photo_url');
+      if (!photoUrl || String(photoUrl).trim() === '') {
+        try {
+          const photoColIdx = colMap['photo_url'];
+          if (photoColIdx !== undefined) {
+            const richText = sheet.getRange(r + 2, photoColIdx + 1).getRichTextValue();
+            if (richText && richText.getLinkUrl()) {
+              photoUrl = richText.getLinkUrl();
+            }
+          }
+        } catch (rtErr) {
+          // ignore
+        }
+      }
+
+      const lat = getVal('latitude');
+      const lng = getVal('longitude');
+      const acc = getVal('gps_accuracy');
+
+      submissions.push({
+        submissionId: submissionId,
+        submittedAt: submittedAtStr,
+        zone: String(getVal('zone') || 'K'),
+        building: String(getVal('building') || ''),
+        roomNumber: String(getVal('room_number') || ''),
+        roomIdentifier: String(getVal('room_identifier') || ''),
+        category: String(getVal('category') || 'Hardware'),
+        conditionRating: Number(getVal('condition_rating') || 3),
+        defectNotes: String(getVal('defect_notes') || ''),
+        photoId: getVal('photo_id') ? String(getVal('photo_id')) : null,
+        photoUrl: photoUrl ? String(photoUrl) : null,
+        photoCapturedAt: photoCapturedAtStr,
+        latitude: lat !== null && lat !== '' && !isNaN(Number(lat)) ? Number(lat) : null,
+        longitude: lng !== null && lng !== '' && !isNaN(Number(lng)) ? Number(lng) : null,
+        gpsAccuracy: acc !== null && acc !== '' && !isNaN(Number(acc)) ? Number(acc) : null,
+      });
+    }
+
+    return createJsonResponse({
+      ok: true,
+      submissions: submissions,
+      total: submissions.length,
+    });
+  } catch (err) {
+    return createJsonResponse({
+      ok: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: err.toString(),
+      },
+    });
+  }
 }
 
 /**
@@ -199,6 +336,9 @@ function doPost(e) {
       photoUrl || '',
       payload.photoCapturedAt ? String(payload.photoCapturedAt) : '',
       new Date().toISOString(), // synced_at timestamp
+      payload.latitude !== undefined && payload.latitude !== null ? Number(payload.latitude) : '',
+      payload.longitude !== undefined && payload.longitude !== null ? Number(payload.longitude) : '',
+      payload.gpsAccuracy !== undefined && payload.gpsAccuracy !== null ? Number(payload.gpsAccuracy) : '',
     ];
 
     sheet.appendRow(newRow);
@@ -381,15 +521,17 @@ function ensureHeaderColumns(sheet) {
     return String(h).trim();
   });
 
-  // If photo_url is missing, insert column K
-  if (!headerStrings.includes('photo_url')) {
-    const photoIdIndex = headerStrings.indexOf('photo_id');
-    const insertCol = photoIdIndex >= 0 ? photoIdIndex + 2 : sheet.getLastColumn() + 1;
-    sheet.insertColumnAfter(photoIdIndex >= 0 ? photoIdIndex + 1 : sheet.getLastColumn());
-    sheet.getRange(1, insertCol).setValue('photo_url');
-    formatHeaderRow(sheet);
-    Logger.log('Inserted missing "photo_url" column at index ' + insertCol);
+  // Ensure all HEADERS exist in the sheet
+  for (let c = 0; c < HEADERS.length; c++) {
+    const expectedHeader = HEADERS[c];
+    if (!headerStrings.includes(expectedHeader)) {
+      const nextCol = sheet.getLastColumn() + 1;
+      sheet.getRange(1, nextCol).setValue(expectedHeader);
+      headerStrings.push(expectedHeader);
+      Logger.log('Inserted missing header column: ' + expectedHeader + ' at column ' + nextCol);
+    }
   }
+  formatHeaderRow(sheet);
 }
 
 function formatHeaderRow(sheet) {

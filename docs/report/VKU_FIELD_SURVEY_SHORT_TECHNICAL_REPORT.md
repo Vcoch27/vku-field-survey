@@ -36,6 +36,7 @@ VKU Field Survey đã hoàn thiện các chức năng khảo sát thiết bị, 
 |  5  | Quản lý bản ghi và thống kê   | ✅ Hoàn thành | Xem chi tiết, lọc bản ghi, theo dõi trạng thái và thống kê theo đánh giá, danh mục, khu vực.                                                                              |
 |  6  | Ứng dụng Android              | ✅ Hoàn thành | Đóng gói bằng Capacitor, tích hợp Camera, Network và Local Notifications; tự động bật thông báo khi đồng bộ thành công sau khi có mạng; APK debug build và tải trực tiếp. |
 |  7  | Định vị GPS thực địa          | ✅ Hoàn thành | Tích hợp `@capacitor/geolocation` và Web Geolocation API; ghi nhận tọa độ vĩ độ/kinh độ, độ chính xác thực địa; liên kết trực tiếp Google Maps.                           |
+|  8  | Đồng bộ hai chiều & Đối soát dữ liệu | ✅ Hoàn thành | Hỗ trợ đối soát và đồng bộ hai chiều giữa thiết bị và Google Sheets: xóa bản ghi cục bộ khi bị xóa trên Sheet; nạp bản ghi mới từ cloud; bảo vệ an toàn 100% bản ghi offline. |
 
 ---
 

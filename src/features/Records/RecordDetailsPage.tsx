@@ -82,32 +82,34 @@ export function RecordDetailsPage({ recordId, storage, orchestrator }: RecordDet
     }
   };
 
-  // Object URL lifecycle management for photo Blob
+  // Object URL lifecycle management for photo Blob or remote URL
   useEffect(() => {
     let active = true;
     if (record?.surveyData.photo?.binaryData) {
       const url = URL.createObjectURL(record.surveyData.photo.binaryData);
       queueMicrotask(() => {
-        if (active) {
-          setPhotoUrl(url);
-        }
+        if (active) setPhotoUrl(url);
       });
-
       return () => {
         active = false;
         URL.revokeObjectURL(url);
       };
+    } else if (record?.surveyData.remotePhotoUrl) {
+      queueMicrotask(() => {
+        if (active) setPhotoUrl(record.surveyData.remotePhotoUrl ?? null);
+      });
+      return () => {
+        active = false;
+      };
     } else {
       queueMicrotask(() => {
-        if (active) {
-          setPhotoUrl(null);
-        }
+        if (active) setPhotoUrl(null);
       });
       return () => {
         active = false;
       };
     }
-  }, [record]);
+  }, [record?.surveyData.photo?.binaryData, record?.surveyData.remotePhotoUrl]);
 
   if (loading) {
     return (

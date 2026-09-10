@@ -285,4 +285,99 @@ describe('GoogleSheetsSubmissionGateway', () => {
     expect(typeof dto.photoBase64).toBe('string');
     expect(dto.photoBase64!.length).toBeGreaterThan(0);
   });
+
+  describe('fetchRemoteSubmissions', () => {
+    it('returns error if endpointUrl is not configured', async () => {
+      const gateway = new GoogleSheetsSubmissionGateway({ endpointUrl: '' });
+      const result = await gateway.fetchRemoteSubmissions();
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('endpoint URL');
+    });
+
+    it('successfully fetches and parses remote submissions', async () => {
+      const mockRecords = [
+        {
+          submissionId: 'remote-uuid-1',
+          submittedAt: '2026-09-02T10:00:00.000Z',
+          zone: 'K',
+          building: 'A',
+          roomNumber: '101',
+          roomIdentifier: 'K.A-101',
+          category: 'Hardware',
+          conditionRating: 4,
+          defectNotes: 'Good',
+          photoId: 'photo-1',
+          photoUrl: 'https://drive.google.com/file/d/test/view',
+          photoCapturedAt: null,
+          latitude: 15.975,
+          longitude: 108.252,
+          gpsAccuracy: 10,
+        },
+      ];
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ok: true,
+          submissions: mockRecords,
+          total: 1,
+        }),
+      });
+
+      const gateway = new GoogleSheetsSubmissionGateway({
+        endpointUrl: 'https://script.google.com/macros/s/TEST/exec',
+        clientToken: 'secret-token',
+        fetchFn: mockFetch as unknown as typeof fetch,
+      });
+
+      const result = await gateway.fetchRemoteSubmissions();
+      expect(result.success).toBe(true);
+      expect(result.submissions).toHaveLength(1);
+      expect(result.submissions![0].submissionId).toBe('remote-uuid-1');
+      expect(result.submissions![0].photoUrl).toBe('https://drive.google.com/file/d/test/view');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('action=list_records&token=secret-token'),
+        expect.objectContaining({ method: 'GET' })
+      );
+    });
+
+    it('returns error when backend reports failure', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ok: false,
+          error: { message: 'Sheet not found' },
+        }),
+      });
+
+      const gateway = new GoogleSheetsSubmissionGateway({
+        endpointUrl: 'https://script.google.com/macros/s/TEST/exec',
+        fetchFn: mockFetch as unknown as typeof fetch,
+      });
+
+      const result = await gateway.fetchRemoteSubmissions();
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Sheet not found');
+    });
+
+    it('handles HTTP error status', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 502,
+        statusText: 'Bad Gateway',
+      });
+
+      const gateway = new GoogleSheetsSubmissionGateway({
+        endpointUrl: 'https://script.google.com/macros/s/TEST/exec',
+        fetchFn: mockFetch as unknown as typeof fetch,
+      });
+
+      const result = await gateway.fetchRemoteSubmissions();
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('502');
+    });
+  });
 });

@@ -3,7 +3,11 @@ import {
   type SubmissionOutcome,
   type SurveySubmission,
 } from '../../domain/models.ts';
-import type { SubmissionGateway } from '../../domain/ports.ts';
+import type {
+  FetchRemoteSubmissionsOutcome,
+  RemoteSubmissionRecord,
+  SubmissionGateway,
+} from '../../domain/ports.ts';
 
 export interface GoogleSheetsSubmissionGatewayOptions {
   readonly endpointUrl?: string;
@@ -221,6 +225,73 @@ export class GoogleSheetsSubmissionGateway implements SubmissionGateway {
       return {
         outcome: 'RETRYABLE_FAILURE',
         reason: `Network dispatch failed: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  /**
+   * Fetches all active survey submissions from Google Sheets for reconciliation.
+   */
+  async fetchRemoteSubmissions(): Promise<FetchRemoteSubmissionsOutcome> {
+    if (!this.endpointUrl || this.endpointUrl === '') {
+      return {
+        success: false,
+        error: 'Google Sheets submission endpoint URL (VITE_SUBMISSION_ENDPOINT) is not configured.',
+      };
+    }
+
+    const url = new URL(this.endpointUrl);
+    url.searchParams.set('action', 'list_records');
+    if (this.clientToken) {
+      url.searchParams.set('token', this.clientToken);
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const response = await this.fetchFn(url.toString(), {
+        method: 'GET',
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `Server responded with HTTP ${response.status}: ${response.statusText}`,
+        };
+      }
+
+      const raw = await response.json();
+      if (!raw || typeof raw !== 'object' || raw.ok === false) {
+        const errMsg =
+          (raw && typeof raw === 'object' && 'error' in raw && typeof raw.error === 'object' && raw.error && 'message' in raw.error
+            ? String(raw.error.message)
+            : raw?.message) ?? 'Failed to retrieve remote submissions';
+        return {
+          success: false,
+          error: errMsg,
+        };
+      }
+
+      const submissions = Array.isArray(raw.submissions) ? raw.submissions : [];
+      return {
+        success: true,
+        submissions: submissions as RemoteSubmissionRecord[],
+      };
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return {
+          success: false,
+          error: `Fetch remote submissions timed out after ${this.timeoutMs}ms.`,
+        };
+      }
+
+      return {
+        success: false,
+        error: `Network fetch failed: ${err instanceof Error ? err.message : String(err)}`,
       };
     } finally {
       clearTimeout(timeoutId);

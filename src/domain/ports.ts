@@ -32,6 +32,39 @@ export interface SurveyStoragePort {
   markSubmissionSynced(submissionId: Uuid, acknowledgementDetails?: unknown): Promise<void>;
   deleteSubmission(submissionId: Uuid): Promise<boolean>;
   resetSubmissionToPending(submissionId: Uuid): Promise<boolean>;
+  reconcileRemoteSubmissions?(
+    remoteSubmissions: readonly RemoteSubmissionRecord[]
+  ): Promise<ReconciliationResult>;
+}
+
+export interface RemoteSubmissionRecord {
+  readonly submissionId: string;
+  readonly submittedAt: string;
+  readonly zone: string;
+  readonly building: string;
+  readonly roomNumber: string;
+  readonly roomIdentifier: string;
+  readonly category: string;
+  readonly conditionRating: number;
+  readonly defectNotes: string;
+  readonly photoId: string | null;
+  readonly photoUrl: string | null;
+  readonly photoCapturedAt: string | null;
+  readonly latitude: number | null;
+  readonly longitude: number | null;
+  readonly gpsAccuracy: number | null;
+}
+
+export interface ReconciliationResult {
+  readonly deletedCount: number;
+  readonly importedCount: number;
+  readonly totalRemoteCount: number;
+}
+
+export interface FetchRemoteSubmissionsOutcome {
+  readonly success: boolean;
+  readonly submissions?: readonly RemoteSubmissionRecord[];
+  readonly error?: string;
 }
 
 export interface CameraPort {
@@ -51,6 +84,7 @@ export interface NetworkStatusPort {
 
 export interface SubmissionGateway {
   sendSubmission(submission: SurveySubmission): Promise<SubmissionOutcome>;
+  fetchRemoteSubmissions?(): Promise<FetchRemoteSubmissionsOutcome>;
 }
 
 export interface UuidGenerator {

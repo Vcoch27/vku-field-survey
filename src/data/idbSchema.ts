@@ -3,6 +3,7 @@ import type {
   CampusZone,
   ConditionRating,
   FailureDisposition,
+  GpsCoordinates,
   IsoTimestamp,
   PhotoAttachment,
   SurveyCategory,
@@ -28,6 +29,8 @@ export interface StoredInspectionSnapshot {
   readonly conditionRating: ConditionRating;
   readonly defectNotes: string;
   readonly photo: PhotoAttachment | null;
+  readonly gps?: GpsCoordinates | null;
+  readonly remotePhotoUrl?: string | null;
   readonly floor?: string;
 }
 
@@ -51,6 +54,8 @@ export interface StoredDraftRecord {
   readonly conditionRating?: ConditionRating | null;
   readonly defectNotes?: string;
   readonly photo?: PhotoAttachment | null;
+  readonly gps?: GpsCoordinates | null;
+  readonly remotePhotoUrl?: string | null;
   readonly lastModifiedAt: IsoTimestamp;
   readonly floor?: string;
 }

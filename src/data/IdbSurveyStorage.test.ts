@@ -460,4 +460,98 @@ describe('IdbSurveyStorage', () => {
     expect(updated?.syncStatus).toBe('PENDING_SYNC');
     expect(updated?.lastErrorMessage).toBeUndefined();
   });
+
+  describe('reconcileRemoteSubmissions', () => {
+    it('deletes local SYNCED submissions when absent from remote list', async () => {
+      const syncedSub1 = createSubmission({ id: 'synced-1' });
+      const syncedSub2 = createSubmission({ id: 'synced-2' });
+      await storage.enqueueSubmission(syncedSub1);
+      await storage.enqueueSubmission(syncedSub2);
+      await storage.markSubmissionSynced('synced-1');
+      await storage.markSubmissionSynced('synced-2');
+
+      // Remote only contains synced-2 (synced-1 was deleted on server)
+      const remote = [
+        {
+          submissionId: 'synced-2',
+          submittedAt: '2026-09-02T10:00:00.000Z',
+          zone: 'K',
+          building: 'A',
+          roomNumber: '101',
+          roomIdentifier: 'K.A-101',
+          category: 'Hardware',
+          conditionRating: 4,
+          defectNotes: '',
+          photoId: null,
+          photoUrl: null,
+          photoCapturedAt: null,
+          latitude: null,
+          longitude: null,
+          gpsAccuracy: null,
+        },
+      ];
+
+      const result = await storage.reconcileRemoteSubmissions(remote);
+      expect(result.deletedCount).toBe(1);
+
+      const check1 = await storage.getSubmissionById('synced-1');
+      expect(check1).toBeNull(); // deleted!
+
+      const check2 = await storage.getSubmissionById('synced-2');
+      expect(check2).not.toBeNull(); // kept!
+    });
+
+    it('preserves PENDING_SYNC and SYNC_FAILED submissions even if absent from remote', async () => {
+      const pendingSub = createSubmission({ id: 'pending-sub' });
+      const failedSub = createSubmission({ id: 'failed-sub' });
+      await storage.enqueueSubmission(pendingSub);
+      await storage.enqueueSubmission(failedSub);
+      await storage.updateSubmissionStatus('failed-sub', 'SYNC_FAILED', 'Offline');
+
+      // Remote list is empty
+      const result = await storage.reconcileRemoteSubmissions([]);
+      expect(result.deletedCount).toBe(0);
+
+      const checkPending = await storage.getSubmissionById('pending-sub');
+      expect(checkPending).not.toBeNull();
+      expect(checkPending?.syncStatus).toBe('PENDING_SYNC');
+
+      const checkFailed = await storage.getSubmissionById('failed-sub');
+      expect(checkFailed).not.toBeNull();
+      expect(checkFailed?.syncStatus).toBe('SYNC_FAILED');
+    });
+
+    it('imports new remote submissions into local IndexedDB with SYNCED status', async () => {
+      const remote = [
+        {
+          submissionId: 'from-cloud-1',
+          submittedAt: '2026-09-02T12:00:00.000Z',
+          zone: 'V',
+          building: 'V1',
+          roomNumber: '302',
+          roomIdentifier: 'V.V1-302',
+          category: 'AC',
+          conditionRating: 5,
+          defectNotes: 'Cooling fast',
+          photoId: 'photo-drive-1',
+          photoUrl: 'https://drive.google.com/open?id=test',
+          photoCapturedAt: null,
+          latitude: 15.9754,
+          longitude: 108.2525,
+          gpsAccuracy: 8,
+        },
+      ];
+
+      const result = await storage.reconcileRemoteSubmissions(remote);
+      expect(result.importedCount).toBe(1);
+
+      const imported = await storage.getSubmissionById('from-cloud-1');
+      expect(imported).not.toBeNull();
+      expect(imported?.syncStatus).toBe('SYNCED');
+      expect(imported?.surveyData.zone).toBe('V');
+      expect(imported?.surveyData.category).toBe('AC');
+      expect(imported?.surveyData.remotePhotoUrl).toBe('https://drive.google.com/open?id=test');
+      expect(imported?.surveyData.gps?.latitude).toBe(15.9754);
+    });
+  });
 });

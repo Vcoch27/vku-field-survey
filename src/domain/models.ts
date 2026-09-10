@@ -41,6 +41,7 @@ interface InspectionFields {
   readonly defectNotes: string;
   readonly photo: PhotoAttachment | null;
   readonly gps?: GpsCoordinates | null;
+  readonly remotePhotoUrl?: string | null;
 }
 
 export interface InspectionDraft extends InspectionFields {
@@ -59,6 +60,7 @@ export interface InspectionSnapshot {
   readonly defectNotes: string;
   readonly photo: PhotoAttachment | null;
   readonly gps?: GpsCoordinates | null;
+  readonly remotePhotoUrl?: string | null;
 }
 
 /**

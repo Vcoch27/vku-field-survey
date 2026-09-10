@@ -1,4 +1,4 @@
-import type { SubmissionGateway, SurveyStoragePort } from './ports.ts';
+import type { ReconciliationResult, SubmissionGateway, SurveyStoragePort } from './ports.ts';
 import { formatFullRoomIdentifier, type Uuid } from './models.ts';
 import { globalSyncEventHub, type SyncEventHub } from './syncEvents.ts';
 
@@ -22,6 +22,7 @@ export interface SyncResult {
   readonly syncedCount: number;
   readonly failedCount: number;
   readonly recoveredStaleCount: number;
+  readonly reconciliation?: ReconciliationResult;
   readonly errors: ReadonlyArray<{
     readonly submissionId: Uuid;
     readonly reason: string;
@@ -162,11 +163,30 @@ export async function synchronizeSubmissions(
     }
   }
 
+  // Phase 2: Inbound Pull & Cloud Reconciliation
+  // If gateway supports fetching remote submissions and storage supports reconciling them,
+  // pull the active state from Google Sheets and reconcile deletions and new submissions.
+  let reconciliation: ReconciliationResult | undefined;
+  if (
+    typeof gateway.fetchRemoteSubmissions === 'function' &&
+    typeof storage.reconcileRemoteSubmissions === 'function'
+  ) {
+    try {
+      const fetchResult = await gateway.fetchRemoteSubmissions();
+      if (fetchResult.success && fetchResult.submissions) {
+        reconciliation = await storage.reconcileRemoteSubmissions(fetchResult.submissions);
+      }
+    } catch {
+      // Non-blocking: remote fetch error during reconciliation doesn't invalidate outbound push
+    }
+  }
+
   const result: SyncResult = {
     processedCount,
     syncedCount,
     failedCount,
     recoveredStaleCount,
+    reconciliation,
     errors,
   };
 

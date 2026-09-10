@@ -2,16 +2,22 @@ import type { IDBPDatabase } from 'idb';
 import type {
   CampusZone,
   ClaimedSubmission,
+  ConditionRating,
   FailureDisposition,
   InspectionDraft,
   InspectionSnapshot,
   IsoTimestamp,
   PhotoAttachment,
+  SurveyCategory,
   SurveySubmission,
   SyncStatus,
   Uuid,
 } from '../domain/models.ts';
-import type { SurveyStoragePort } from '../domain/ports.ts';
+import type {
+  ReconciliationResult,
+  RemoteSubmissionRecord,
+  SurveyStoragePort,
+} from '../domain/ports.ts';
 import { isCampusZone } from '../domain/validation.ts';
 import {
   DRAFT_LAST_MODIFIED_INDEX,
@@ -57,6 +63,8 @@ function toDurableDraft(draft: InspectionDraft): StoredDraftRecord {
     conditionRating: draft.conditionRating,
     defectNotes: draft.defectNotes,
     photo: toDurablePhoto(draft.photo),
+    gps: draft.gps ?? null,
+    remotePhotoUrl: draft.remotePhotoUrl ?? null,
     lastModifiedAt: draft.lastModifiedAt,
   };
 }
@@ -71,6 +79,8 @@ function toDomainDraft(stored: StoredDraftRecord): InspectionDraft {
     conditionRating: stored.conditionRating ?? null,
     defectNotes: stored.defectNotes ?? '',
     photo: stored.photo ?? null,
+    gps: stored.gps ?? null,
+    remotePhotoUrl: stored.remotePhotoUrl ?? null,
     lastModifiedAt: stored.lastModifiedAt,
   };
 }
@@ -87,6 +97,8 @@ function toDurableSubmission(submission: SurveySubmission): StoredSubmissionReco
       conditionRating: submission.surveyData.conditionRating,
       defectNotes: submission.surveyData.defectNotes,
       photo: toDurablePhoto(submission.surveyData.photo),
+      gps: submission.surveyData.gps ?? null,
+      remotePhotoUrl: submission.surveyData.remotePhotoUrl ?? null,
     },
     syncStatus: submission.syncStatus,
     ...(submission.lastErrorMessage === undefined
@@ -129,6 +141,8 @@ function toDomainSubmission(
     conditionRating: record.surveyData.conditionRating,
     defectNotes: record.surveyData.defectNotes,
     photo: record.surveyData.photo,
+    gps: record.surveyData.gps ?? null,
+    remotePhotoUrl: record.surveyData.remotePhotoUrl ?? null,
   };
 
   const submission: SurveySubmission = {
@@ -428,5 +442,88 @@ export class IdbSurveyStorage implements SurveyStoragePort {
     await transaction.store.put(resetRecord);
     await transaction.done;
     return true;
+  }
+
+  async reconcileRemoteSubmissions(
+    remoteSubmissions: readonly RemoteSubmissionRecord[]
+  ): Promise<ReconciliationResult> {
+    const database = await this.database;
+    const transaction = database.transaction(SUBMISSION_STORE, 'readwrite');
+    const allStored = await transaction.store.getAll();
+
+    const remoteIdMap = new Map<string, RemoteSubmissionRecord>();
+    for (const remote of remoteSubmissions) {
+      if (remote.submissionId && remote.submissionId.trim() !== '') {
+        remoteIdMap.set(remote.submissionId.trim(), remote);
+      }
+    }
+
+    let deletedCount = 0;
+    let importedCount = 0;
+
+    // 1. Reconcile Deletions:
+    // Any locally SYNCED record that does NOT exist in remoteIdMap was deleted on the server.
+    // INVARIANT: Never delete PENDING_SYNC, SYNCING, or SYNC_FAILED records!
+    for (const localRecord of allStored) {
+      if (localRecord.syncStatus === 'SYNCED') {
+        if (!remoteIdMap.has(localRecord.id)) {
+          await transaction.store.delete(localRecord.id);
+          deletedCount += 1;
+        }
+      }
+    }
+
+    // 2. Reconcile Inbound Imports:
+    // Any record in remoteIdMap that is NOT currently stored locally is imported as SYNCED.
+    const localIdSet = new Set(allStored.map((r) => r.id));
+    for (const [remoteId, remote] of remoteIdMap) {
+      if (!localIdSet.has(remoteId)) {
+        const zone: CampusZone = isCampusZone(remote.zone) ? (remote.zone as CampusZone) : 'K';
+        const category: SurveyCategory = (
+          ['Hardware', 'Projector', 'AC', 'Electrical', 'Furniture'].includes(remote.category)
+            ? remote.category
+            : 'Hardware'
+        ) as SurveyCategory;
+        const rating = Math.min(
+          5,
+          Math.max(1, Math.round(Number(remote.conditionRating) || 3))
+        ) as ConditionRating;
+
+        const importedSubmission: StoredSubmissionRecord = {
+          id: remoteId,
+          timestamp: remote.submittedAt || new Date().toISOString(),
+          syncStatus: 'SYNCED',
+          surveyData: {
+            zone,
+            building: remote.building || '',
+            roomNumber: remote.roomNumber || '',
+            category,
+            conditionRating: rating,
+            defectNotes: remote.defectNotes || '',
+            photo: null,
+            remotePhotoUrl: remote.photoUrl || null,
+            gps:
+              remote.latitude !== null && remote.longitude !== null
+                ? {
+                    latitude: remote.latitude,
+                    longitude: remote.longitude,
+                    accuracy: remote.gpsAccuracy ?? undefined,
+                  }
+                : null,
+          },
+        };
+
+        await transaction.store.put(importedSubmission);
+        importedCount += 1;
+      }
+    }
+
+    await transaction.done;
+
+    return {
+      deletedCount,
+      importedCount,
+      totalRemoteCount: remoteIdMap.size,
+    };
   }
 }
