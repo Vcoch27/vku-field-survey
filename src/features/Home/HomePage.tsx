@@ -171,7 +171,8 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
                       {record.surveyData.category} · {record.surveyData.conditionRating}★
                       {record.surveyData.gps && (
                         <span className="recent-gps-badge" title="GPS verified">
-                          {' '}· 📍 GPS
+                          {' '}
+                          · 📍 GPS
                         </span>
                       )}
                     </span>
@@ -217,7 +218,7 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
                 aria-label="Download Android APK package"
               >
                 <span aria-hidden="true">⬇️</span>
-                <span>Download APK (46.3 MB)</span>
+                <span>Download APK (16.3 MB)</span>
               </a>
               <span className="download-hint">
                 Compatible with Android 7.0+ (Nougat) or newer · v1.0.0
