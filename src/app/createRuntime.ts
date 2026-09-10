@@ -3,6 +3,7 @@ import type {
   CameraPort,
   Clock,
   NetworkStatusPort,
+  NotificationPort,
   SubmissionGateway,
   SurveyStoragePort,
   UuidGenerator,
@@ -13,6 +14,8 @@ import { CapacitorCameraAdapter } from '../platform/camera/CapacitorCameraAdapte
 import { WebCameraAdapter } from '../platform/camera/WebCameraAdapter.ts';
 import { CapacitorNetworkAdapter } from '../platform/network/CapacitorNetworkAdapter.ts';
 import { WebNetworkStatusAdapter } from '../platform/network/WebNetworkStatusAdapter.ts';
+import { CapacitorNotificationAdapter } from '../platform/notification/CapacitorNotificationAdapter.ts';
+import { WebNotificationAdapter } from '../platform/notification/WebNotificationAdapter.ts';
 import {
   type NativeSyncTriggerSource,
   NativeSyncTriggerAdapter,
@@ -38,6 +41,7 @@ export interface CreateRuntimeOptions {
   readonly clock?: Clock;
   readonly camera?: CameraPort;
   readonly networkStatus?: NetworkStatusPort;
+  readonly notification?: NotificationPort;
   readonly gateway?: SubmissionGateway;
   readonly targetWindow?: Window;
   readonly targetDocument?: Document;
@@ -51,6 +55,7 @@ export interface AppRuntime {
   readonly clock: Clock;
   readonly camera: CameraPort;
   readonly networkStatus: NetworkStatusPort;
+  readonly notification: NotificationPort;
   readonly syncTriggerAdapter: SyncTriggerPort;
   readonly isNative: boolean;
   readonly syncOrchestrator: SyncOrchestrator;
@@ -111,13 +116,39 @@ export function createRuntime(options?: CreateRuntimeOptions): AppRuntime {
         })
       : undefined);
 
+  const notification: NotificationPort =
+    options?.notification ??
+    (isNative
+      ? new CapacitorNotificationAdapter()
+      : new WebNotificationAdapter({ targetWindow: options?.targetWindow }));
+
+  let wasOffline = false;
+  void networkStatus.getNetworkStatus().then((status) => {
+    wasOffline = !status.isConnected;
+  });
+  networkStatus.subscribe((status) => {
+    if (!status.isConnected) {
+      wasOffline = true;
+    }
+  });
+
   const handleTrigger = async (source: CombinedSyncTriggerSource) => {
     options?.onSyncAttempt?.(source);
     // M6 single logical synchronization workflow:
     // If a real SubmissionGateway is provided, run the synchronization engine.
     // If no gateway is configured (OQ-003 destination unresolved), queued items remain PENDING_SYNC.
     if (gateway) {
-      await synchronizeSubmissions({ storage, gateway });
+      const syncResult = await synchronizeSubmissions({ storage, gateway });
+      const isReconnected =
+        source === 'NATIVE_NETWORK_RECONNECT' || source === 'ONLINE_EVENT' || wasOffline;
+
+      if (syncResult.syncedCount > 0 && isReconnected) {
+        wasOffline = false;
+        await notification.notify({
+          title: 'Đồng bộ thành công',
+          body: `Đã đồng bộ ${syncResult.syncedCount} bản ghi khảo sát lên Google Sheets khi có kết nối mạng.`,
+        });
+      }
     }
   };
 
@@ -151,6 +182,7 @@ export function createRuntime(options?: CreateRuntimeOptions): AppRuntime {
     clock,
     camera,
     networkStatus,
+    notification,
     syncTriggerAdapter,
     isNative,
     syncOrchestrator,

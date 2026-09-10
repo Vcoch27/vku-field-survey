@@ -10,7 +10,10 @@ import { RecordDetailsPage } from '../features/Records/RecordDetailsPage.tsx';
 import { StatisticsPage } from '../features/Statistics/StatisticsPage.tsx';
 import { SurveyPage } from '../features/SurveyPage/SurveyPage.tsx';
 
-import { ZERO_STATUS_COUNTS, type SubmissionStatusCounts } from '../domain/submissionAggregation.ts';
+import {
+  ZERO_STATUS_COUNTS,
+  type SubmissionStatusCounts,
+} from '../domain/submissionAggregation.ts';
 import { createSubmissionViewModel } from '../domain/submissionViewModel.ts';
 import { globalSyncEventHub } from '../domain/syncEvents.ts';
 
@@ -37,6 +40,7 @@ function AppContent({ runtime }: { readonly runtime: AppRuntime }) {
 
   useEffect(() => {
     refreshCounts();
+    void runtime.notification.requestPermission().catch(() => {});
 
     void runtime.networkStatus.getNetworkStatus().then((status) => {
       setIsConnected(status.isConnected);

@@ -7,7 +7,9 @@ import { WebCameraAdapter } from '../platform/camera/WebCameraAdapter.ts';
 import { CapacitorCameraAdapter } from '../platform/camera/CapacitorCameraAdapter.ts';
 import { WebSyncTriggerAdapter } from '../platform/pwa/WebSyncTriggerAdapter.ts';
 import { NativeSyncTriggerAdapter } from '../platform/native/NativeSyncTriggerAdapter.ts';
-import type { SubmissionGateway, SurveyStoragePort } from '../domain/ports.ts';
+import { WebNotificationAdapter } from '../platform/notification/WebNotificationAdapter.ts';
+import { CapacitorNotificationAdapter } from '../platform/notification/CapacitorNotificationAdapter.ts';
+import type { NotificationPort, SubmissionGateway, SurveyStoragePort } from '../domain/ports.ts';
 
 describe('Runtime Composition Root (createRuntime)', () => {
   it('9. web runtime selects web adapters when isNative is false', () => {
@@ -16,6 +18,7 @@ describe('Runtime Composition Root (createRuntime)', () => {
     expect(runtime.isNative).toBe(false);
     expect(runtime.networkStatus).toBeInstanceOf(WebNetworkStatusAdapter);
     expect(runtime.camera).toBeInstanceOf(WebCameraAdapter);
+    expect(runtime.notification).toBeInstanceOf(WebNotificationAdapter);
     expect(runtime.syncTriggerAdapter).toBeInstanceOf(WebSyncTriggerAdapter);
 
     runtime.syncTriggerAdapter.destroy();
@@ -27,6 +30,7 @@ describe('Runtime Composition Root (createRuntime)', () => {
     expect(runtime.isNative).toBe(true);
     expect(runtime.networkStatus).toBeInstanceOf(CapacitorNetworkAdapter);
     expect(runtime.camera).toBeInstanceOf(CapacitorCameraAdapter);
+    expect(runtime.notification).toBeInstanceOf(CapacitorNotificationAdapter);
     expect(runtime.syncTriggerAdapter).toBeInstanceOf(NativeSyncTriggerAdapter);
 
     runtime.syncTriggerAdapter.destroy();
@@ -51,6 +55,66 @@ describe('Runtime Composition Root (createRuntime)', () => {
     await runtime.syncTriggerAdapter.dispatchTrigger('MANUAL');
 
     expect(mockStorage.atomicClaimNext).toHaveBeenCalled();
+
+    runtime.syncTriggerAdapter.destroy();
+  });
+
+  it('triggers local notification when reconnecting from offline and items are synced successfully', async () => {
+    const mockStorage = {
+      recoverStaleClaims: vi.fn().mockResolvedValue(0),
+      atomicClaimNext: vi
+        .fn()
+        .mockResolvedValueOnce({
+          claimToken: 'token-1',
+          submission: {
+            id: 'sub-reconnect-1',
+            timestamp: new Date().toISOString(),
+            syncStatus: 'SYNCING',
+            surveyData: {
+              zone: 'K',
+              building: 'A',
+              roomNumber: '205',
+              category: 'Hardware',
+              conditionRating: 5,
+              defectNotes: '',
+              photo: null,
+            },
+          },
+        })
+        .mockResolvedValueOnce(null),
+      markSubmissionSynced: vi.fn().mockResolvedValue(undefined),
+    } as unknown as SurveyStoragePort;
+
+    const mockGateway = {
+      sendSubmission: vi.fn().mockResolvedValue({
+        outcome: 'ACKNOWLEDGED',
+        acknowledgementToken: 'ack-123',
+      }),
+    } as unknown as SubmissionGateway;
+
+    const mockNotification: NotificationPort = {
+      requestPermission: vi.fn().mockResolvedValue(true),
+      notify: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const runtime = createRuntime({
+      isNative: true,
+      storage: mockStorage,
+      gateway: mockGateway,
+      notification: mockNotification,
+    });
+
+    // Simulate transition back online
+    await runtime.syncTriggerAdapter.dispatchTrigger('NATIVE_NETWORK_RECONNECT');
+
+    expect(mockGateway.sendSubmission).toHaveBeenCalled();
+    expect(mockStorage.markSubmissionSynced).toHaveBeenCalledWith('sub-reconnect-1', 'ack-123');
+    expect(mockNotification.notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Đồng bộ thành công',
+        body: expect.stringContaining('1 bản ghi'),
+      })
+    );
 
     runtime.syncTriggerAdapter.destroy();
   });

@@ -34,7 +34,7 @@ VKU Field Survey đã hoàn thiện các chức năng khảo sát thiết bị, 
 | 3 | Lưu dữ liệu ngoại tuyến | ✅ Hoàn thành | Tự động lưu bản nháp, ảnh và bản ghi chờ đồng bộ bằng IndexedDB thông qua thư viện `idb`. |
 | 4 | Đồng bộ tự động | ✅ Hoàn thành | Xử lý hàng đợi tuần tự khi có mạng; chỉ xác nhận `SYNCED` sau phản hồi thành công từ máy chủ. |
 | 5 | Quản lý bản ghi và thống kê | ✅ Hoàn thành | Xem chi tiết, lọc bản ghi, theo dõi trạng thái và thống kê theo đánh giá, danh mục, khu vực. |
-| 6 | Ứng dụng Android | ✅ Hoàn thành | Đóng gói bằng Capacitor, tích hợp Camera và Network; APK debug đã build và cài đặt thành công. |
+| 6 | Ứng dụng Android | ✅ Hoàn thành | Đóng gói bằng Capacitor, tích hợp Camera, Network và Local Notifications; tự động bật thông báo khi đồng bộ thành công sau khi có mạng; APK debug build và tải trực tiếp. |
 
 ---
 

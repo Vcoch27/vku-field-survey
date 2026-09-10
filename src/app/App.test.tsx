@@ -51,6 +51,10 @@ describe('App Shell & Navigation Integration', () => {
       clock: { now: () => '2026-09-02T12:00:00.000Z' },
       networkStatus: mockNetworkStatus,
       camera: mockCamera,
+      notification: {
+        requestPermission: vi.fn().mockResolvedValue(true),
+        notify: vi.fn().mockResolvedValue(undefined),
+      },
       syncTriggerAdapter: mockSyncTriggerAdapter as unknown as WebSyncTriggerAdapter,
       isNative: false,
       syncOrchestrator: {

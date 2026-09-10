@@ -61,22 +61,23 @@ The public deployment is served over HTTPS at [vkufieldsurvey.vanhoang.online](h
 
 - Installable manifest with standalone display, responsive 192x192 and 512x512 icons, and VKU theme color `#0284C7`.
 - Service-worker App Shell precaching and offline boot/reload support.
-- Capacitor Android wrapper with Camera, Network, and App lifecycle plugins.
-- Pre-built Android package ready for download and installation: [vku-field-survey.apk](https://vkufieldsurvey.vanhoang.online/downloads/vku-field-survey.apk) (v1.0.0, 8.7 MB, Android 7.0+).
+- Capacitor Android wrapper with Camera, Network, Local Notifications, and App lifecycle plugins.
+- Pre-built Android package ready for download and installation: [vku-field-survey.apk](https://vkufieldsurvey.vanhoang.online/downloads/vku-field-survey.apk) (v1.0.0, 16.3 MB, Android 7.0+).
+- Native notification on reconnection when pending offline inspections are synced successfully to Google Sheets.
 - Responsive layouts verified from narrow mobile widths through desktop widths.
 
 ## Technology stack
 
-| Area | Technology |
-| --- | --- |
-| UI | React 19, TypeScript 6 |
-| Build | Vite 8 |
-| PWA | `vite-plugin-pwa`, Workbox, custom service worker |
-| Persistence | IndexedDB through `idb` |
-| Native | Capacitor 8, Camera, Network, and App plugins |
-| Remote destination | Google Apps Script Web App and Google Sheets |
-| Testing | Vitest, Testing Library, jsdom, fake-indexeddb |
-| Static hosting | Cloudflare Pages |
+| Area               | Technology                                        |
+| ------------------ | ------------------------------------------------- |
+| UI                 | React 19, TypeScript 6                            |
+| Build              | Vite 8                                            |
+| PWA                | `vite-plugin-pwa`, Workbox, custom service worker |
+| Persistence        | IndexedDB through `idb`                           |
+| Native             | Capacitor 8, Camera, Network, and App plugins     |
+| Remote destination | Google Apps Script Web App and Google Sheets      |
+| Testing            | Vitest, Testing Library, jsdom, fake-indexeddb    |
+| Static hosting     | Cloudflare Pages                                  |
 
 Dependency versions are locked in `package-lock.json`. Use `npm ci` for reproducible installation; do not upgrade packages solely because newer versions exist.
 
@@ -148,10 +149,10 @@ The app can be developed and exercised offline without a submission endpoint, bu
 
 Copy `.env.example` to `.env.local` and set only the values needed for your environment:
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `VITE_SUBMISSION_ENDPOINT` | Required for real remote sync | HTTPS URL of the deployed Google Apps Script Web App |
-| `VITE_SUBMISSION_CLIENT_TOKEN` | Optional | Lightweight anti-accidental-abuse token matching the Apps Script property |
+| Variable                       | Required                      | Purpose                                                                   |
+| ------------------------------ | ----------------------------- | ------------------------------------------------------------------------- |
+| `VITE_SUBMISSION_ENDPOINT`     | Required for real remote sync | HTTPS URL of the deployed Google Apps Script Web App                      |
+| `VITE_SUBMISSION_CLIENT_TOKEN` | Optional                      | Lightweight anti-accidental-abuse token matching the Apps Script property |
 
 Example:
 
@@ -166,15 +167,15 @@ For the spreadsheet schema, Apps Script deployment, Script Properties, and Cloud
 
 ## Available commands
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Start the Vite development server |
-| `npm run typecheck` | Type-check application and build configuration |
-| `npm run lint` | Run ESLint across the repository |
-| `npm run test -- --run` | Run the Vitest suite once |
-| `npm run test` | Run Vitest in watch mode |
-| `npm run build` | Type-check and create the production bundle in `dist/` |
-| `npm run preview` | Serve the production bundle locally |
+| Command                 | Purpose                                                |
+| ----------------------- | ------------------------------------------------------ |
+| `npm run dev`           | Start the Vite development server                      |
+| `npm run typecheck`     | Type-check application and build configuration         |
+| `npm run lint`          | Run ESLint across the repository                       |
+| `npm run test -- --run` | Run the Vitest suite once                              |
+| `npm run test`          | Run Vitest in watch mode                               |
+| `npm run build`         | Type-check and create the production bundle in `dist/` |
+| `npm run preview`       | Serve the production bundle locally                    |
 
 Before opening a pull request or publishing a build, run:
 
@@ -239,15 +240,15 @@ The Capacitor application ID is `com.vku.fieldsurvey`, and `dist/` is the config
 
 Use these build settings:
 
-| Setting | Value |
-| --- | --- |
-| Repository | `Vcoch27/vku-field-survey` |
-| Production branch | `main` |
-| Framework preset | Vite or None |
-| Build command | `npm run build` |
-| Build output directory | `dist` |
-| Root directory | `/` |
-| Node version | Read from `.node-version` / `.nvmrc` (`24.20.0`) |
+| Setting                | Value                                            |
+| ---------------------- | ------------------------------------------------ |
+| Repository             | `Vcoch27/vku-field-survey`                       |
+| Production branch      | `main`                                           |
+| Framework preset       | Vite or None                                     |
+| Build command          | `npm run build`                                  |
+| Build output directory | `dist`                                           |
+| Root directory         | `/`                                              |
+| Node version           | Read from `.node-version` / `.nvmrc` (`24.20.0`) |
 
 Set `VITE_SUBMISSION_ENDPOINT` in the Cloudflare production environment when the deployed app must synchronize to Google Sheets. Set `VITE_SUBMISSION_CLIENT_TOKEN` only if the matching Apps Script property is configured. Trigger a new deployment after changing either value because Vite embeds them at build time.
 

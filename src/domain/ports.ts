@@ -60,3 +60,14 @@ export interface UuidGenerator {
 export interface Clock {
   now(): IsoTimestamp;
 }
+
+export interface NotificationPayload {
+  readonly title: string;
+  readonly body: string;
+  readonly id?: number;
+}
+
+export interface NotificationPort {
+  requestPermission(): Promise<boolean>;
+  notify(payload: NotificationPayload): Promise<void>;
+}

@@ -29,8 +29,16 @@ describe('HomePage', () => {
   it('renders real metrics and recent records from storage', async () => {
     const mockRecords: SurveySubmission[] = [
       createMockSubmission({ id: 'sub-1', syncStatus: 'PENDING_SYNC' }),
-      createMockSubmission({ id: 'sub-2', syncStatus: 'SYNCED', surveyData: { ...createMockSubmission().surveyData, roomNumber: '206' } }),
-      createMockSubmission({ id: 'sub-3', syncStatus: 'SYNC_FAILED', surveyData: { ...createMockSubmission().surveyData, roomNumber: '207' } }),
+      createMockSubmission({
+        id: 'sub-2',
+        syncStatus: 'SYNCED',
+        surveyData: { ...createMockSubmission().surveyData, roomNumber: '206' },
+      }),
+      createMockSubmission({
+        id: 'sub-3',
+        syncStatus: 'SYNC_FAILED',
+        surveyData: { ...createMockSubmission().surveyData, roomNumber: '207' },
+      }),
     ];
 
     const mockStorage = {
@@ -76,11 +84,22 @@ describe('HomePage', () => {
     const mockStorage = {
       getAllSubmissions: vi.fn().mockResolvedValue([]),
       getDraft: vi.fn().mockResolvedValue({
-        id: 'draft-1', zone: 'V', building: 'A', roomNumber: '205', category: 'Projector',
-        conditionRating: 3, defectNotes: '', photo: null, lastModifiedAt: new Date().toISOString(),
+        id: 'draft-1',
+        zone: 'V',
+        building: 'A',
+        roomNumber: '205',
+        category: 'Projector',
+        conditionRating: 3,
+        defectNotes: '',
+        photo: null,
+        lastModifiedAt: new Date().toISOString(),
       }),
     } as unknown as SurveyStoragePort;
-    render(<RouterProvider initialPath="/"><HomePage storage={mockStorage} isConnected /></RouterProvider>);
+    render(
+      <RouterProvider initialPath="/">
+        <HomePage storage={mockStorage} isConnected />
+      </RouterProvider>
+    );
     await waitFor(() => expect(screen.getByText('Unfinished inspection')).toBeTruthy());
     expect(screen.getByText('V.A-205')).toBeTruthy();
     expect(screen.getByText('Resume')).toBeTruthy();

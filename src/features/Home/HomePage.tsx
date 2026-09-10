@@ -15,8 +15,13 @@ export interface HomePageProps {
 function hasDraftContent(draft: InspectionDraft | null): draft is InspectionDraft {
   return Boolean(
     draft &&
-      (draft.zone || draft.building.trim() || draft.roomNumber.trim() || draft.category ||
-        draft.conditionRating || draft.defectNotes.trim() || draft.photo)
+    (draft.zone ||
+      draft.building.trim() ||
+      draft.roomNumber.trim() ||
+      draft.category ||
+      draft.conditionRating ||
+      draft.defectNotes.trim() ||
+      draft.photo)
   );
 }
 
@@ -54,9 +59,13 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
   const recentRecords = view.records.slice(0, 4);
 
   const startNewSurvey = async () => {
-    if (activeDraft && !window.confirm(
-      'Start a new inspection? Your unfinished inspection will be removed from this device.'
-    )) return;
+    if (
+      activeDraft &&
+      !window.confirm(
+        'Start a new inspection? Your unfinished inspection will be removed from this device.'
+      )
+    )
+      return;
     if (activeDraft) await storage.clearDraft(activeDraft.id);
     navigate('/survey');
   };
@@ -65,18 +74,27 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
     <div className="page-container home-page">
       <section className="home-intro" aria-labelledby="home-title">
         <p className="eyebrow">Today&apos;s field work</p>
-        <h1 className="home-title" id="home-title">What needs attention next?</h1>
-        <p className="home-subtitle">Capture inspections, protect work offline, and confirm delivery.</p>
+        <h1 className="home-title" id="home-title">
+          What needs attention next?
+        </h1>
+        <p className="home-subtitle">
+          Capture inspections, protect work offline, and confirm delivery.
+        </p>
       </section>
 
       {activeDraft && (
         <section className="workflow-section" aria-labelledby="continue-title">
-          <h2 className="section-title" id="continue-title">Continue work</h2>
+          <h2 className="section-title" id="continue-title">
+            Continue work
+          </h2>
           <Link href="/survey" className="continue-card">
             <div className="continue-card-main">
               <span className="continue-label">Unfinished inspection</span>
               <strong>{formatFullRoomIdentifier(activeDraft) ?? 'Location not completed'}</strong>
-              <span>{activeDraft.category ?? 'Category not selected'} · Edited {relativeTime(activeDraft.lastModifiedAt)}</span>
+              <span>
+                {activeDraft.category ?? 'Category not selected'} · Edited{' '}
+                {relativeTime(activeDraft.lastModifiedAt)}
+              </span>
             </div>
             <span className="continue-action">Resume</span>
           </Link>
@@ -84,26 +102,39 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
       )}
 
       <button type="button" onClick={startNewSurvey} className="btn-start-survey">
-        <span aria-hidden="true">+</span><span>Start New Survey</span>
+        <span aria-hidden="true">+</span>
+        <span>Start New Survey</span>
       </button>
 
       {!loading && view.status.needsAttention > 0 && (
         <section className="workflow-section" aria-labelledby="attention-title">
-          <h2 className="section-title" id="attention-title">Needs attention</h2>
+          <h2 className="section-title" id="attention-title">
+            Needs attention
+          </h2>
           <div className="attention-list">
             {view.status.failed > 0 && (
               <Link href={buildRecordsHref({ status: 'FAILED' })} className="attention-row danger">
-                <span><strong>{view.status.failed}</strong> failed {view.status.failed === 1 ? 'sync' : 'syncs'}</span><span>Review</span>
+                <span>
+                  <strong>{view.status.failed}</strong> failed{' '}
+                  {view.status.failed === 1 ? 'sync' : 'syncs'}
+                </span>
+                <span>Review</span>
               </Link>
             )}
             {view.status.pending > 0 && (
               <Link href={buildRecordsHref({ status: 'PENDING' })} className="attention-row">
-                <span><strong>{view.status.pending}</strong> waiting to sync</span><span>View</span>
+                <span>
+                  <strong>{view.status.pending}</strong> waiting to sync
+                </span>
+                <span>View</span>
               </Link>
             )}
             {view.status.syncing > 0 && (
               <Link href={buildRecordsHref({ status: 'SYNCING' })} className="attention-row">
-                <span><strong>{view.status.syncing}</strong> syncing now</span><span>View</span>
+                <span>
+                  <strong>{view.status.syncing}</strong> syncing now
+                </span>
+                <span>View</span>
               </Link>
             )}
           </div>
@@ -112,8 +143,14 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
 
       <section className="workflow-section" aria-labelledby="recent-title">
         <div className="section-header-row">
-          <h2 className="section-title" id="recent-title">Recent activity</h2>
-          {recentRecords.length > 0 && <Link href="/records" className="section-link">All records</Link>}
+          <h2 className="section-title" id="recent-title">
+            Recent activity
+          </h2>
+          {recentRecords.length > 0 && (
+            <Link href="/records" className="section-link">
+              All records
+            </Link>
+          )}
         </div>
         {loading ? (
           <div className="loading-card">Loading recent inspections…</div>
@@ -130,11 +167,19 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
                 <Link key={record.id} href={`/records/${record.id}`} className="recent-item-card">
                   <div className="recent-item-main">
                     <strong className="recent-room-badge">{room}</strong>
-                    <span className="recent-category">{record.surveyData.category} · {record.surveyData.conditionRating}★</span>
+                    <span className="recent-category">
+                      {record.surveyData.category} · {record.surveyData.conditionRating}★
+                    </span>
                   </div>
                   <div className="recent-item-status">
                     <span className={`status-pill ${record.syncStatus.toLowerCase()}`}>
-                      {record.syncStatus === 'SYNCED' ? 'Synced' : record.syncStatus === 'SYNC_FAILED' ? 'Failed' : record.syncStatus === 'SYNCING' ? 'Syncing' : 'Pending'}
+                      {record.syncStatus === 'SYNCED'
+                        ? 'Synced'
+                        : record.syncStatus === 'SYNC_FAILED'
+                          ? 'Failed'
+                          : record.syncStatus === 'SYNCING'
+                            ? 'Syncing'
+                            : 'Pending'}
                     </span>
                     <span className="recent-time">{relativeTime(record.timestamp)}</span>
                   </div>
@@ -147,14 +192,17 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
 
       <section className="workflow-section download-section" aria-labelledby="download-title">
         <div className="section-header-row">
-          <h2 className="section-title" id="download-title">App installation</h2>
+          <h2 className="section-title" id="download-title">
+            App installation
+          </h2>
         </div>
         <div className="download-card">
           <div className="download-card-body">
             <div className="download-card-badge">Android APK</div>
             <strong className="download-card-title">VKU Field Survey for Android</strong>
             <p className="download-card-desc">
-              Install directly on physical Android phones for full offline queueing and native camera support.
+              Install directly on physical Android phones for full offline queueing and native
+              camera support.
             </p>
             <div className="download-actions">
               <a
@@ -164,9 +212,11 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
                 aria-label="Download Android APK package"
               >
                 <span aria-hidden="true">⬇️</span>
-                <span>Download APK (8.7 MB)</span>
+                <span>Download APK (16.3 MB)</span>
               </a>
-              <span className="download-hint">Compatible with Android 7.0+ (Nougat) or newer · v1.0.0</span>
+              <span className="download-hint">
+                Compatible with Android 7.0+ (Nougat) or newer · v1.0.0
+              </span>
             </div>
           </div>
         </div>
@@ -174,7 +224,9 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
 
       <p className={`connection-note ${isConnected ? 'online' : 'offline'}`} role="status">
         <span aria-hidden="true" />
-        {isConnected ? 'Online · synchronization runs automatically' : 'Offline · inspections remain saved on this device'}
+        {isConnected
+          ? 'Online · synchronization runs automatically'
+          : 'Offline · inspections remain saved on this device'}
       </p>
     </div>
   );
