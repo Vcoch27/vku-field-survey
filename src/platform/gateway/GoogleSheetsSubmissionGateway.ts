@@ -26,6 +26,9 @@ export interface GoogleSheetsSubmissionDto {
   readonly photoCapturedAt: string | null;
   readonly photoBase64?: string | null;
   readonly clientToken?: string;
+  readonly latitude?: number | null;
+  readonly longitude?: number | null;
+  readonly gpsAccuracy?: number | null;
 }
 
 interface AppsScriptResponse {
@@ -255,6 +258,9 @@ export class GoogleSheetsSubmissionGateway implements SubmissionGateway {
       photoId: data.photo?.id ?? null,
       photoCapturedAt: data.photo?.capturedAt ?? null,
       photoBase64,
+      latitude: data.gps?.latitude ?? null,
+      longitude: data.gps?.longitude ?? null,
+      gpsAccuracy: data.gps?.accuracy ?? null,
       ...(this.clientToken ? { clientToken: this.clientToken } : {}),
     };
   }

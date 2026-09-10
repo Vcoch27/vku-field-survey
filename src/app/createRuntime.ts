@@ -2,6 +2,7 @@ import { IdbSurveyStorage } from '../data/IdbSurveyStorage.ts';
 import type {
   CameraPort,
   Clock,
+  GeolocationPort,
   NetworkStatusPort,
   NotificationPort,
   SubmissionGateway,
@@ -16,6 +17,8 @@ import { CapacitorNetworkAdapter } from '../platform/network/CapacitorNetworkAda
 import { WebNetworkStatusAdapter } from '../platform/network/WebNetworkStatusAdapter.ts';
 import { CapacitorNotificationAdapter } from '../platform/notification/CapacitorNotificationAdapter.ts';
 import { WebNotificationAdapter } from '../platform/notification/WebNotificationAdapter.ts';
+import { CapacitorGeolocationAdapter } from '../platform/geolocation/CapacitorGeolocationAdapter.ts';
+import { WebGeolocationAdapter } from '../platform/geolocation/WebGeolocationAdapter.ts';
 import {
   type NativeSyncTriggerSource,
   NativeSyncTriggerAdapter,
@@ -42,6 +45,7 @@ export interface CreateRuntimeOptions {
   readonly camera?: CameraPort;
   readonly networkStatus?: NetworkStatusPort;
   readonly notification?: NotificationPort;
+  readonly geolocation?: GeolocationPort;
   readonly gateway?: SubmissionGateway;
   readonly targetWindow?: Window;
   readonly targetDocument?: Document;
@@ -56,6 +60,7 @@ export interface AppRuntime {
   readonly camera: CameraPort;
   readonly networkStatus: NetworkStatusPort;
   readonly notification: NotificationPort;
+  readonly geolocation: GeolocationPort;
   readonly syncTriggerAdapter: SyncTriggerPort;
   readonly isNative: boolean;
   readonly syncOrchestrator: SyncOrchestrator;
@@ -122,6 +127,12 @@ export function createRuntime(options?: CreateRuntimeOptions): AppRuntime {
       ? new CapacitorNotificationAdapter()
       : new WebNotificationAdapter({ targetWindow: options?.targetWindow }));
 
+  const geolocation: GeolocationPort =
+    options?.geolocation ??
+    (isNative
+      ? new CapacitorGeolocationAdapter()
+      : new WebGeolocationAdapter({ targetNavigator: options?.targetWindow?.navigator }));
+
   let wasOffline = false;
   void networkStatus.getNetworkStatus().then((status) => {
     wasOffline = !status.isConnected;
@@ -183,6 +194,7 @@ export function createRuntime(options?: CreateRuntimeOptions): AppRuntime {
     camera,
     networkStatus,
     notification,
+    geolocation,
     syncTriggerAdapter,
     isNative,
     syncOrchestrator,

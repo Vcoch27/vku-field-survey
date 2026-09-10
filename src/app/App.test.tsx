@@ -51,6 +51,9 @@ describe('App Shell & Navigation Integration', () => {
       clock: { now: () => '2026-09-02T12:00:00.000Z' },
       networkStatus: mockNetworkStatus,
       camera: mockCamera,
+      geolocation: {
+        getCurrentPosition: vi.fn().mockResolvedValue(null),
+      },
       notification: {
         requestPermission: vi.fn().mockResolvedValue(true),
         notify: vi.fn().mockResolvedValue(undefined),

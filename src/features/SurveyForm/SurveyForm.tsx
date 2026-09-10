@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import type { CameraPort, Clock, SurveyStoragePort, UuidGenerator } from '../../domain/ports';
+import type { CameraPort, Clock, GeolocationPort, SurveyStoragePort, UuidGenerator } from '../../domain/ports';
 import {
   type CampusZone,
+  type GpsCoordinates,
   type InspectionDraft,
   type PhotoAttachment,
   SURVEY_CATEGORIES,
@@ -21,6 +22,7 @@ export interface SurveyFormProps {
   uuidGenerator?: UuidGenerator;
   clock?: Clock;
   camera?: CameraPort;
+  geolocation?: GeolocationPort;
   onSubmitted?: () => Promise<void> | void;
 }
 
@@ -29,6 +31,7 @@ export function SurveyForm({
   uuidGenerator,
   clock,
   camera,
+  geolocation,
   onSubmitted,
 }: SurveyFormProps) {
   const [draftId, setDraftId] = useState<Uuid>('');
@@ -41,6 +44,9 @@ export function SurveyForm({
   const [photo, setPhoto] = useState<PhotoAttachment | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [gps, setGps] = useState<GpsCoordinates | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isInitializing, setIsInitializing] = useState(true);
@@ -80,6 +86,9 @@ export function SurveyForm({
           setDefectNotes(draft.defectNotes);
           if (draft.photo) {
             setPhoto(draft.photo);
+          }
+          if (draft.gps) {
+            setGps(draft.gps);
           }
         } else {
           setDraftId(generateUuid());
@@ -146,6 +155,7 @@ export function SurveyForm({
       conditionRating: conditionRating === '' ? null : conditionRating,
       defectNotes,
       photo,
+      gps,
       lastModifiedAt: new Date().toISOString(),
     };
 
@@ -173,6 +183,7 @@ export function SurveyForm({
     conditionRating,
     defectNotes,
     photo,
+    gps,
   ]);
 
   // Submission handler with duplicate-click guard
@@ -215,6 +226,7 @@ export function SurveyForm({
       conditionRating: conditionRating === '' ? null : conditionRating,
       defectNotes,
       photo,
+      gps,
       lastModifiedAt: new Date().toISOString(),
     };
 
@@ -241,6 +253,40 @@ export function SurveyForm({
     } finally {
       isSubmittingRef.current = false;
     }
+  };
+
+  const handleCaptureGps = async () => {
+    if (!geolocation) {
+      setGpsError('Thiết bị không hỗ trợ định vị GPS.');
+      return;
+    }
+    onFieldEdit();
+    setGpsError(null);
+    setIsLocating(true);
+    try {
+      const pos = await geolocation.getCurrentPosition();
+      if (pos) {
+        setGps({
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+          accuracy: pos.accuracy,
+          altitude: pos.altitude,
+          capturedAt: pos.capturedAt,
+        });
+      } else {
+        setGpsError('Không thể lấy tọa độ GPS. Hãy kiểm tra quyền truy cập vị trí trên máy.');
+      }
+    } catch {
+      setGpsError('Lỗi khi định vị GPS.');
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
+  const handleRemoveGps = () => {
+    onFieldEdit();
+    setGps(null);
+    setGpsError(null);
   };
 
   const handleCapturePhoto = async () => {
@@ -279,6 +325,8 @@ export function SurveyForm({
     setDefectNotes('');
     setPhoto(null);
     setPhotoError(null);
+    setGps(null);
+    setGpsError(null);
     setValidationErrors({});
     setSubmitStatus('idle');
     setSubmitErrorMessage(null);
@@ -521,6 +569,85 @@ export function SurveyForm({
                 </div>
               ) : (
                 <div className="preview-value pending">Select zone and enter building + room</div>
+              )}
+            </div>
+
+            {/* GPS Field Coordinates */}
+            <div className="gps-section-block">
+              <div className="gps-header-row">
+                <div className="gps-title-group">
+                  <span className="gps-title">Field GPS Verification</span>
+                  <span className="gps-subtitle">Verify precise geospatial coordinates for this inspection</span>
+                </div>
+                {gps ? (
+                  <button
+                    type="button"
+                    onClick={handleCaptureGps}
+                    className="btn-gps-refresh"
+                    disabled={isLocating}
+                    aria-label="Refresh GPS coordinates"
+                  >
+                    {isLocating ? 'Locating…' : '🔄 Refresh GPS'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleCaptureGps}
+                    className="btn-gps-capture"
+                    disabled={isLocating}
+                    aria-label="Capture GPS coordinates"
+                  >
+                    {isLocating ? '⏳ Locating…' : '📍 Capture GPS Location'}
+                  </button>
+                )}
+              </div>
+
+              {gps ? (
+                <div className="gps-badge-card">
+                  <div className="gps-badge-info">
+                    <div className="gps-coords-display">
+                      <span className="gps-coords-text">
+                        {gps.latitude.toFixed(6)}°, {gps.longitude.toFixed(6)}°
+                      </span>
+                      {typeof gps.accuracy === 'number' && (
+                        <span className="gps-accuracy-pill">±{Math.round(gps.accuracy)}m</span>
+                      )}
+                    </div>
+                    <span className="gps-meta-text">
+                      {gps.capturedAt
+                        ? `Captured at ${new Date(gps.capturedAt).toLocaleTimeString()}`
+                        : 'GPS Coordinates Attached'}
+                    </span>
+                  </div>
+                  <div className="gps-badge-actions">
+                    <a
+                      href={`https://www.google.com/maps?q=${gps.latitude},${gps.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="gps-map-action"
+                      title="View on Google Maps"
+                    >
+                      🗺️ Map
+                    </a>
+                    <button
+                      type="button"
+                      onClick={handleRemoveGps}
+                      className="btn-gps-remove"
+                      aria-label="Remove GPS coordinates"
+                      title="Remove GPS coordinates"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="gps-hint-message">
+                  {gpsError ? (
+                    <span className="gps-error-message">{gpsError}</span>
+                  ) : (
+                    'Optional: Tap "Capture GPS Location" to record latitude/longitude coordinates.'
+                  )}
+                </p>
               )}
             </div>
           </div>

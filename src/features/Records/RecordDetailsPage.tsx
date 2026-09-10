@@ -207,6 +207,46 @@ export function RecordDetailsPage({ recordId, storage, orchestrator }: RecordDet
           </div>
         </div>
 
+        {/* Field GPS Coordinates Section */}
+        <div className="details-section">
+          <h3 className="section-heading">Field GPS Coordinates</h3>
+          {data.gps ? (
+            <div className="gps-details-card">
+              <div className="gps-details-info">
+                <div className="gps-details-coords">
+                  <span className="gps-pin-icon" aria-hidden="true">
+                    📍
+                  </span>
+                  <strong className="gps-coords-value">
+                    {data.gps.latitude.toFixed(6)}°, {data.gps.longitude.toFixed(6)}°
+                  </strong>
+                  {typeof data.gps.accuracy === 'number' && (
+                    <span className="gps-accuracy-tag">±{Math.round(data.gps.accuracy)}m</span>
+                  )}
+                </div>
+                <div className="gps-details-meta">
+                  <span>
+                    Captured:{' '}
+                    {data.gps.capturedAt ? new Date(data.gps.capturedAt).toLocaleString() : 'N/A'}
+                  </span>
+                </div>
+              </div>
+              <a
+                href={`https://www.google.com/maps?q=${data.gps.latitude},${data.gps.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-open-map"
+              >
+                🗺️ Open in Google Maps &rarr;
+              </a>
+            </div>
+          ) : (
+            <div className="no-gps-box">
+              <span className="muted">No GPS coordinates recorded for this inspection.</span>
+            </div>
+          )}
+        </div>
+
         {/* Assessment Section */}
         <div className="details-section">
           <h3 className="section-heading">Equipment Assessment</h3>

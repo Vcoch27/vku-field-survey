@@ -71,3 +71,15 @@ export interface NotificationPort {
   requestPermission(): Promise<boolean>;
   notify(payload: NotificationPayload): Promise<void>;
 }
+
+export interface GeolocationPosition {
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly accuracy?: number;
+  readonly altitude?: number | null;
+  readonly capturedAt: IsoTimestamp;
+}
+
+export interface GeolocationPort {
+  getCurrentPosition(): Promise<GeolocationPosition | null>;
+}

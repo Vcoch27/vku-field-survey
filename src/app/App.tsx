@@ -81,6 +81,7 @@ function AppContent({ runtime }: { readonly runtime: AppRuntime }) {
           uuidGenerator={runtime.uuidGenerator}
           clock={runtime.clock}
           camera={runtime.camera}
+          geolocation={runtime.geolocation}
           onSubmitted={handleSubmitted}
         />
       )}

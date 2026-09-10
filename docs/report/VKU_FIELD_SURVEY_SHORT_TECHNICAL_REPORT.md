@@ -1,9 +1,9 @@
 # BÁO CÁO KỸ THUẬT NGẮN MINI-PROJECT
 
-**Học phần:** Phát triển ứng dụng di động đa nền tảng (VKU)  
-**Tên Mini-Project:** Mini-Project 1 — VKU Field Survey  
-**Sinh viên:** Nguyễn Văn Hoàng  
-**Mã sinh viên:** 23IT088  
+**Học phần:** Phát triển ứng dụng di động đa nền tảng (VKU)
+**Tên Mini-Project:** Mini-Project 1 — VKU Field Survey
+**Sinh viên:** Nguyễn Văn Hoàng
+**Mã sinh viên:** 23IT088
 **Ngày nộp:** 03/09/2026
 
 ---
@@ -27,14 +27,15 @@ VKU Field Survey đã hoàn thiện các chức năng khảo sát thiết bị, 
 
 ## 2. DANH SÁCH CHỨC NĂNG ĐÃ TRIỂN KHAI
 
-| STT | Chức năng | Trạng thái | Nội dung triển khai |
-| :---: | --- | :---: | --- |
-| 1 | Giao diện khảo sát responsive | ✅ Hoàn thành | Tối ưu cho điện thoại và máy tính; hỗ trợ nhập địa điểm, danh mục, đánh giá 1–5 sao, ghi chú và ảnh. |
-| 2 | PWA cài đặt độc lập | ✅ Hoàn thành | Có manifest, Service Worker, App Shell và hỗ trợ khởi động lại khi ngoại tuyến. |
-| 3 | Lưu dữ liệu ngoại tuyến | ✅ Hoàn thành | Tự động lưu bản nháp, ảnh và bản ghi chờ đồng bộ bằng IndexedDB thông qua thư viện `idb`. |
-| 4 | Đồng bộ tự động | ✅ Hoàn thành | Xử lý hàng đợi tuần tự khi có mạng; chỉ xác nhận `SYNCED` sau phản hồi thành công từ máy chủ. |
-| 5 | Quản lý bản ghi và thống kê | ✅ Hoàn thành | Xem chi tiết, lọc bản ghi, theo dõi trạng thái và thống kê theo đánh giá, danh mục, khu vực. |
-| 6 | Ứng dụng Android | ✅ Hoàn thành | Đóng gói bằng Capacitor, tích hợp Camera, Network và Local Notifications; tự động bật thông báo khi đồng bộ thành công sau khi có mạng; APK debug build và tải trực tiếp. |
+| STT | Chức năng                     |  Trạng thái   | Nội dung triển khai                                                                                                                                                       |
+| :-: | ----------------------------- | :-----------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|  1  | Giao diện khảo sát responsive | ✅ Hoàn thành | Tối ưu cho điện thoại và máy tính; hỗ trợ nhập địa điểm, danh mục, đánh giá 1–5 sao, ghi chú và ảnh.                                                                      |
+|  2  | PWA cài đặt độc lập           | ✅ Hoàn thành | Có manifest, Service Worker, App Shell và hỗ trợ khởi động lại khi ngoại tuyến.                                                                                           |
+|  3  | Lưu dữ liệu ngoại tuyến       | ✅ Hoàn thành | Tự động lưu bản nháp, ảnh và bản ghi chờ đồng bộ bằng IndexedDB thông qua thư viện `idb`.                                                                                 |
+|  4  | Đồng bộ tự động               | ✅ Hoàn thành | Xử lý hàng đợi tuần tự khi có mạng; chỉ xác nhận `SYNCED` sau phản hồi thành công từ máy chủ.                                                                             |
+|  5  | Quản lý bản ghi và thống kê   | ✅ Hoàn thành | Xem chi tiết, lọc bản ghi, theo dõi trạng thái và thống kê theo đánh giá, danh mục, khu vực.                                                                              |
+|  6  | Ứng dụng Android              | ✅ Hoàn thành | Đóng gói bằng Capacitor, tích hợp Camera, Network và Local Notifications; tự động bật thông báo khi đồng bộ thành công sau khi có mạng; APK debug build và tải trực tiếp. |
+|  7  | Định vị GPS thực địa          | ✅ Hoàn thành | Tích hợp `@capacitor/geolocation` và Web Geolocation API; ghi nhận tọa độ vĩ độ/kinh độ, độ chính xác thực địa; liên kết trực tiếp Google Maps. |
 
 ---
 

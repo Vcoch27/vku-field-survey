@@ -48,6 +48,7 @@ describe('submitSurveyOffline', () => {
       conditionRating: 4,
       defectNotes: 'Loose cable',
       photo: null,
+      gps: null,
     });
     // Explicit invariant: snapshot contains no floor property
     expect('floor' in result.submission.surveyData).toBe(false);
@@ -56,6 +57,45 @@ describe('submitSurveyOffline', () => {
       result.submission,
       'draft-uuid-1'
     );
+  });
+
+  it('preserves GPS coordinates when present', async () => {
+    const draftWithGps: InspectionDraft = {
+      id: 'draft-gps-1',
+      zone: 'V',
+      building: 'Building V1',
+      roomNumber: 'V102',
+      category: 'Electrical',
+      conditionRating: 5,
+      defectNotes: 'All working',
+      photo: null,
+      gps: {
+        latitude: 15.9754,
+        longitude: 108.2525,
+        accuracy: 12,
+        capturedAt: '2026-09-02T15:52:00.000Z',
+      },
+      lastModifiedAt: '2026-09-02T15:55:00.000Z',
+    };
+
+    const storage = {
+      enqueueSubmissionAndClearDraft: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const result = await submitSurveyOffline(draftWithGps, {
+      ...defaultDependencies,
+      storage,
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.submission.surveyData.gps).toEqual({
+      latitude: 15.9754,
+      longitude: 108.2525,
+      accuracy: 12,
+      capturedAt: '2026-09-02T15:52:00.000Z',
+    });
   });
 
   it('zone is required for offline submission and returns validation error if null or invalid', async () => {

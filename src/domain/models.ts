@@ -26,12 +26,21 @@ export interface PhotoAttachment {
 
 export type CampusZone = 'K' | 'V';
 
+export interface GpsCoordinates {
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly accuracy?: number;
+  readonly altitude?: number | null;
+  readonly capturedAt?: IsoTimestamp;
+}
+
 interface InspectionFields {
   readonly zone: CampusZone | null;
   readonly building: string;
   readonly roomNumber: string;
   readonly defectNotes: string;
   readonly photo: PhotoAttachment | null;
+  readonly gps?: GpsCoordinates | null;
 }
 
 export interface InspectionDraft extends InspectionFields {
@@ -49,6 +58,7 @@ export interface InspectionSnapshot {
   readonly conditionRating: ConditionRating;
   readonly defectNotes: string;
   readonly photo: PhotoAttachment | null;
+  readonly gps?: GpsCoordinates | null;
 }
 
 /**

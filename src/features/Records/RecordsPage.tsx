@@ -192,7 +192,11 @@ export function RecordsPage({ storage, orchestrator, initialQuery }: RecordsPage
                           <div className="record-summary-line"><span>{data.category}</span><span className="record-stars" aria-label={`${data.conditionRating} out of 5 stars`}>{'★'.repeat(data.conditionRating)}{'☆'.repeat(5 - data.conditionRating)}</span></div>
                           {data.defectNotes && <p className="record-defect-preview">“{data.defectNotes}”</p>}
                           {record.syncStatus === 'SYNC_FAILED' && record.lastErrorMessage && <p className="record-error-snippet">{record.lastErrorMessage}</p>}
-                          <div className="record-footer"><time dateTime={record.timestamp}>{formatTimestamp(record.timestamp)}</time>{data.photo && <span className="photo-indicator" title="Photo attached" aria-label="Photo attached">▣</span>}</div>
+                          <div className="record-footer">
+                            <time dateTime={record.timestamp}>{formatTimestamp(record.timestamp)}</time>
+                            {data.photo && <span className="photo-indicator" title="Photo attached" aria-label="Photo attached">▣</span>}
+                            {data.gps && <span className="gps-verified-tag" title="GPS coordinates verified" aria-label="GPS verified">📍 GPS</span>}
+                          </div>
                         </Link>
                         <details className="record-menu"><summary aria-label={`More actions for ${room}`}>⋯</summary><div className="record-menu-popover">{record.syncStatus === 'SYNC_FAILED' && <button type="button" disabled={retryingId === record.id || retryBlocked} onClick={(event) => handleRetry(record, event)}>{retryingId === record.id ? 'Retrying…' : retryBlocked ? 'Review required' : 'Retry sync'}</button>}<button type="button" className="danger-action" onClick={(event) => handleDelete(record, event)}>{record.syncStatus === 'SYNCED' ? 'Delete local copy' : 'Delete local record'}</button></div></details>
                       </article>

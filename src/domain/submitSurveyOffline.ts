@@ -86,6 +86,7 @@ export async function submitSurveyOffline(
       : null,
     category,
     conditionRating,
+    gps: draft.gps ?? null,
   };
 
   const submission = createPendingSubmission(snapshot, {
