@@ -69,7 +69,9 @@ export class CapacitorNotificationAdapter implements NotificationPort {
             title: payload.title,
             body: payload.body,
             channelId: VKU_SYNC_NOTIFICATION_CHANNEL_ID,
-            smallIcon: 'ic_launcher',
+            smallIcon: 'ic_vku_notification',
+            largeIcon: 'ic_vku_notification',
+            iconColor: '#0054a6',
           },
         ],
       });

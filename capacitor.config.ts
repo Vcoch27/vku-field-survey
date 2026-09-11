@@ -10,6 +10,10 @@ const config: CapacitorConfig = {
       autoUpdate: 'atBackground',
       defaultChannel: 'production',
     },
+    LocalNotifications: {
+      smallIcon: 'ic_vku_notification',
+      iconColor: '#0054a6',
+    },
   },
 };
 
