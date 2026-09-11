@@ -97,9 +97,13 @@ export function RecordsPage({
   useEffect(() => {
     let isMounted = true;
     if (autoSyncOnMount && orchestrator) {
-      void orchestrator
-        .synchronize()
-        .then((result) => {
+      const runAutoSync = async () => {
+        if (orchestrator.networkStatus) {
+          const status = await orchestrator.networkStatus.getNetworkStatus();
+          if (!status.isConnected) return;
+        }
+        try {
+          const result = await orchestrator.synchronize();
           if (!isMounted) return;
           loadRecords();
           if (result.reconciliation && result.reconciliation.importedCount > 0) {
@@ -107,8 +111,11 @@ export function RecordsPage({
               `Đã đồng bộ ${result.reconciliation.importedCount} bản ghi từ Google Sheets.`
             );
           }
-        })
-        .catch(() => {});
+        } catch {
+          // Ignore background offline errors
+        }
+      };
+      void runAutoSync();
     }
     return () => {
       isMounted = false;
@@ -133,6 +140,13 @@ export function RecordsPage({
     if (!orchestrator) {
       setActionError('Synchronization is unavailable in the current runtime.');
       return;
+    }
+    if (orchestrator.networkStatus) {
+      const net = await orchestrator.networkStatus.getNetworkStatus();
+      if (!net.isConnected) {
+        setSyncFeedback('Thiết bị đang offline. Dữ liệu sẽ tự động đồng bộ khi có kết nối mạng.');
+        return;
+      }
     }
     setIsSyncingCloud(true);
     setActionError(null);
@@ -162,6 +176,13 @@ export function RecordsPage({
     if (!orchestrator) {
       setActionError('Synchronization is unavailable in the current runtime.');
       return;
+    }
+    if (orchestrator.networkStatus) {
+      const net = await orchestrator.networkStatus.getNetworkStatus();
+      if (!net.isConnected) {
+        setActionError('Thiết bị đang offline. Bản ghi sẽ tự động đồng bộ khi có mạng.');
+        return;
+      }
     }
     setActionError(null);
     setRetryingId(record.id);

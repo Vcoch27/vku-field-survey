@@ -66,7 +66,7 @@ function AppContent({ runtime }: { readonly runtime: AppRuntime }) {
   const handleSubmitted = () => {
     refreshCounts();
     globalSyncEventHub.notifyStorageChanged();
-    if (typeof runtime.syncTriggerAdapter.requestBackgroundSync === 'function') {
+    if (isConnected && typeof runtime.syncTriggerAdapter.requestBackgroundSync === 'function') {
       void runtime.syncTriggerAdapter.requestBackgroundSync();
     }
   };

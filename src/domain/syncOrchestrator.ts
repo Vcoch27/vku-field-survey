@@ -1,4 +1,9 @@
-import type { ReconciliationResult, SubmissionGateway, SurveyStoragePort } from './ports.ts';
+import type {
+  NetworkStatusPort,
+  ReconciliationResult,
+  SubmissionGateway,
+  SurveyStoragePort,
+} from './ports.ts';
 import { formatFullRoomIdentifier, type Uuid } from './models.ts';
 import { globalSyncEventHub, type SyncEventHub } from './syncEvents.ts';
 
@@ -13,6 +18,7 @@ export interface SyncOrchestratorConfig {
 export interface SyncOrchestratorDependencies {
   readonly storage: SurveyStoragePort;
   readonly gateway: SubmissionGateway;
+  readonly networkStatus?: NetworkStatusPort;
   readonly config?: SyncOrchestratorConfig;
   readonly eventHub?: SyncEventHub;
 }
@@ -48,7 +54,35 @@ export const DEFAULT_STALE_CLAIM_TIMEOUT_MS = 30_000;
 export async function synchronizeSubmissions(
   dependencies: SyncOrchestratorDependencies
 ): Promise<SyncResult> {
-  const { storage, gateway, config } = dependencies;
+  const { storage, gateway, networkStatus, config } = dependencies;
+
+  // Offline Guard: Never claim records or attempt remote network synchronization while offline.
+  // Queued inspection records remain safely preserved in PENDING_SYNC.
+  if (networkStatus) {
+    const currentStatus = await networkStatus.getNetworkStatus();
+    if (!currentStatus.isConnected) {
+      return {
+        processedCount: 0,
+        syncedCount: 0,
+        failedCount: 0,
+        recoveredStaleCount: 0,
+        errors: [],
+      };
+    }
+  } else if (
+    typeof navigator !== 'undefined' &&
+    typeof navigator.onLine === 'boolean' &&
+    !navigator.onLine
+  ) {
+    return {
+      processedCount: 0,
+      syncedCount: 0,
+      failedCount: 0,
+      recoveredStaleCount: 0,
+      errors: [],
+    };
+  }
+
   const eventHub = dependencies.eventHub ?? globalSyncEventHub;
   const staleTimeoutMs = config?.staleClaimTimeoutMs ?? DEFAULT_STALE_CLAIM_TIMEOUT_MS;
 
@@ -199,6 +233,10 @@ export class SyncOrchestrator {
 
   constructor(dependencies: SyncOrchestratorDependencies) {
     this.dependencies = dependencies;
+  }
+
+  get networkStatus(): NetworkStatusPort | undefined {
+    return this.dependencies.networkStatus;
   }
 
   synchronize(): Promise<SyncResult> {

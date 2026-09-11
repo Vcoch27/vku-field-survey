@@ -140,6 +140,9 @@ export function createRuntime(options?: CreateRuntimeOptions): AppRuntime {
   networkStatus.subscribe((status) => {
     if (!status.isConnected) {
       wasOffline = true;
+    } else if (wasOffline) {
+      // Reconnected after being offline: trigger synchronization automatically
+      void handleTrigger('ONLINE_EVENT');
     }
   });
 
@@ -149,7 +152,13 @@ export function createRuntime(options?: CreateRuntimeOptions): AppRuntime {
     // If a real SubmissionGateway is provided, run the synchronization engine.
     // If no gateway is configured (OQ-003 destination unresolved), queued items remain PENDING_SYNC.
     if (gateway) {
-      const syncResult = await synchronizeSubmissions({ storage, gateway });
+      const net = await networkStatus.getNetworkStatus();
+      if (!net.isConnected) {
+        // Offline: do not attempt remote dispatch
+        return;
+      }
+
+      const syncResult = await synchronizeSubmissions({ storage, gateway, networkStatus });
       const isReconnected =
         source === 'NATIVE_NETWORK_RECONNECT' || source === 'ONLINE_EVENT' || wasOffline;
 
@@ -185,6 +194,7 @@ export function createRuntime(options?: CreateRuntimeOptions): AppRuntime {
         reason: 'No remote submission gateway configured',
       }),
     },
+    networkStatus,
   });
 
   return {

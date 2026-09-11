@@ -337,4 +337,27 @@ describe('SyncOrchestrator (Domain Workflow)', () => {
       totalRemoteCount: 3,
     });
   });
+
+  it('when networkStatus reports offline, skips claiming and does not call gateway or fail records', async () => {
+    const sub = createFakeSubmission('sub-offline-1', '2026-09-02T10:00:00.000Z');
+    const { storage, getQueue } = createMockStorage([sub]);
+
+    const gateway: SubmissionGateway = {
+      sendSubmission: vi.fn(),
+    };
+
+    const networkStatus = {
+      getNetworkStatus: vi.fn().mockResolvedValue({ isConnected: false }),
+      subscribe: vi.fn().mockReturnValue(() => {}),
+    };
+
+    const result = await synchronizeSubmissions({ storage, gateway, networkStatus });
+
+    expect(result.processedCount).toBe(0);
+    expect(result.syncedCount).toBe(0);
+    expect(result.failedCount).toBe(0);
+    expect(gateway.sendSubmission).not.toHaveBeenCalled();
+    // Verify record remains strictly PENDING_SYNC
+    expect(getQueue()[0].syncStatus).toBe('PENDING_SYNC');
+  });
 });
