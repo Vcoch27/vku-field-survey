@@ -11,28 +11,27 @@ export interface GpsVisualCardProps {
 }
 
 function getLocationContext(lat: number, lng: number): string {
-  // VKU Campus coordinates (~15.9752, 108.2523)
   if (lat >= 15.970 && lat <= 15.982 && lng >= 108.248 && lng <= 108.258) {
-    return '🏫 Khuôn viên ĐH Việt - Hàn (VKU)';
+    return 'Khuôn viên ĐH Việt - Hàn (VKU)';
   }
   if (lat >= 15.90 && lat <= 16.25 && lng >= 108.10 && lng <= 108.45) {
-    return '📍 TP. Đà Nẵng';
+    return 'TP. Đà Nẵng';
   }
-  return '📍 Vị trí thực địa';
+  return 'Tọa độ thực địa';
 }
 
 function getAccuracyDetails(accuracy?: number | null): { label: string; className: string } {
   if (accuracy === undefined || accuracy === null) {
-    return { label: 'Tọa độ chuẩn', className: 'acc-normal' };
+    return { label: 'Chuẩn', className: 'acc-normal' };
   }
   const rounded = Math.round(accuracy);
   if (rounded <= 10) {
-    return { label: `🟢 Chính xác cao (±${rounded}m)`, className: 'acc-high' };
+    return { label: `±${rounded}m (Cao)`, className: 'acc-high' };
   }
   if (rounded <= 30) {
-    return { label: `🔵 Tốt (±${rounded}m)`, className: 'acc-medium' };
+    return { label: `±${rounded}m (Tốt)`, className: 'acc-medium' };
   }
-  return { label: `🟡 Trung bình (±${rounded}m)`, className: 'acc-low' };
+  return { label: `±${rounded}m`, className: 'acc-low' };
 }
 
 export function GpsVisualCard({
@@ -53,45 +52,41 @@ export function GpsVisualCard({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback if clipboard API is restricted
+      // Fallback
     }
   };
 
   if (!gps) {
     if (editable) {
       return (
-        <div className="gps-card-empty-editable">
-          <div className="gps-empty-header">
-            <span className="gps-icon-large" aria-hidden="true">📡</span>
-            <div className="gps-empty-texts">
-              <strong className="gps-empty-title">Định vị thực địa GPS</strong>
-              <p className="gps-empty-desc">
-                Xác thực tọa độ chính xác của phòng học / thiết bị để tránh gian lận và hiển thị trực quan trên bản đồ.
-              </p>
+        <div className="gps-visual-block empty">
+          <div className="gps-empty-row">
+            <div className="gps-empty-text">
+              <span className="gps-status-dot inactive" aria-hidden="true" />
+              <div className="gps-empty-titles">
+                <strong className="gps-empty-heading">Định vị GPS thực địa</strong>
+                <span className="gps-empty-sub">Gắn tọa độ để xác thực vị trí phòng học</span>
+              </div>
             </div>
-          </div>
-
-          {error && <div className="gps-error-banner" role="alert">⚠️ {error}</div>}
-
-          <div className="gps-empty-actions">
             <button
               type="button"
-              className="btn-gps-primary"
+              className="btn-gps-get"
               onClick={onCapture}
               disabled={isLocating}
-              aria-label="Lấy tọa độ GPS"
+              aria-label="Lấy vị trí GPS"
             >
-              {isLocating ? '📡 Đang kết nối vệ tinh GPS…' : '📍 Lấy tọa độ GPS hiện tại'}
+              {isLocating ? 'Đang định vị…' : 'Lấy vị trí GPS'}
             </button>
           </div>
+          {error && <div className="gps-error-line" role="alert">{error}</div>}
         </div>
       );
     }
 
     return (
-      <div className="gps-card-empty-readonly">
-        <span className="gps-empty-readonly-icon" aria-hidden="true">📍</span>
-        <span>Chưa có dữ liệu GPS cho bản ghi này (Khảo sát trước khi bật định vị vệ tinh).</span>
+      <div className="gps-empty-readonly">
+        <span className="gps-status-dot inactive" aria-hidden="true" />
+        <span>Chưa ghi nhận tọa độ GPS cho bản ghi này.</span>
       </div>
     );
   }
@@ -102,83 +97,80 @@ export function GpsVisualCard({
   const externalMapUrl = `https://www.google.com/maps?q=${gps.latitude},${gps.longitude}`;
 
   return (
-    <div className="gps-visual-card">
-      {/* Visual Header */}
-      <div className="gps-visual-header">
-        <div className="gps-location-meta">
-          <span className="gps-campus-label">{locationContext}</span>
-          <span className={`gps-accuracy-badge ${accuracy.className}`}>{accuracy.label}</span>
+    <div className="gps-visual-block verified">
+      {/* Top Bar: Location context & Status */}
+      <div className="gps-block-header">
+        <div className="gps-header-left">
+          <span className="gps-status-dot active" aria-hidden="true" />
+          <span className="gps-location-name">{locationContext}</span>
+          <span className={`gps-accuracy-tag ${accuracy.className}`}>
+            {accuracy.label}
+          </span>
         </div>
 
         {editable && (
-          <div className="gps-edit-buttons">
+          <div className="gps-header-actions">
             <button
               type="button"
-              className="btn-gps-retake"
+              className="btn-ghost-sm"
               onClick={onCapture}
               disabled={isLocating}
-              title="Lấy lại tọa độ GPS"
-              aria-label="Lấy lại tọa độ GPS"
+              title="Lấy lại vị trí GPS"
+              aria-label="Lấy lại vị trí GPS"
             >
-              {isLocating ? '📡 Đang lấy…' : '🔄 Lấy lại'}
+              {isLocating ? 'Đang lấy…' : 'Lấy lại'}
             </button>
             {onRemove && (
               <button
                 type="button"
-                className="btn-gps-clear"
+                className="btn-ghost-sm danger"
                 onClick={onRemove}
                 title="Xóa tọa độ GPS"
                 aria-label="Xóa tọa độ GPS"
               >
-                ✕
+                Xóa
               </button>
             )}
           </div>
         )}
       </div>
 
-      {/* Embedded Map */}
-      <div className="gps-map-container">
+      {/* Embedded Map directly visible */}
+      <div className="gps-map-wrapper">
         <iframe
           title={`Bản đồ tọa độ ${gps.latitude.toFixed(6)}, ${gps.longitude.toFixed(6)}`}
           src={mapUrl}
-          className="gps-map-iframe"
+          className="gps-map-frame"
           loading="lazy"
           allowFullScreen
         />
       </div>
 
-      {/* Visual Coordinates & Actions */}
-      <div className="gps-visual-footer">
-        <div className="gps-coords-cluster">
-          <span className="gps-pin-marker" aria-hidden="true">📍</span>
-          <span className="gps-coords-digits">
+      {/* Bottom Bar: Coordinates + Quick Copy / Open Maps */}
+      <div className="gps-block-footer">
+        <div className="gps-coords-display">
+          <code className="gps-coords-code">
             {gps.latitude.toFixed(6)}°, {gps.longitude.toFixed(6)}°
-          </span>
-          {gps.capturedAt && (
-            <span className="gps-captured-time">
-              (Lúc {new Date(gps.capturedAt).toLocaleTimeString()})
-            </span>
-          )}
+          </code>
         </div>
 
-        <div className="gps-actions-cluster">
+        <div className="gps-footer-actions">
           <button
             type="button"
-            className="btn-gps-copy"
+            className="btn-ghost-sm"
             onClick={handleCopy}
-            title="Sao chép tọa độ vào bộ nhớ tạm"
+            title="Sao chép tọa độ"
           >
-            {copied ? '✓ Đã chép' : '📋 Sao chép'}
+            {copied ? '✓ Đã chép' : 'Sao chép'}
           </button>
           <a
             href={externalMapUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-gps-external-map"
-            title="Mở trên ứng dụng Google Maps"
+            className="btn-ghost-sm"
+            title="Mở Google Maps"
           >
-            🗺️ Mở Maps ↗
+            Google Maps ↗
           </a>
         </div>
       </div>

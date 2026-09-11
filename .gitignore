@@ -34,3 +34,5 @@ android/.gradle
 android/app/build
 android/build
 android/capacitor-cordova-android-plugins/build
+public/downloads/*.apk
+dist/downloads/*.apk

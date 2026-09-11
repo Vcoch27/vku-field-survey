@@ -191,63 +191,34 @@
 .form-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1.25rem;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.125rem;
+  box-shadow: var(--shadow-xs);
   display: flex;
   flex-direction: column;
-  gap: 1.125rem;
+  gap: 1rem;
 }
 
 @media (min-width: 640px) {
   .form-card {
-    padding: 1.5rem;
+    padding: 1.25rem 1.5rem;
   }
 }
 
 .card-header {
   display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--color-surface-muted);
-}
-
-.card-header-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  background-color: var(--color-surface-subtle);
-  border: 1px solid var(--color-border);
-  color: var(--color-primary);
-  display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.card-header-titles {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
+  justify-content: space-between;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-surface-muted);
 }
 
 .card-title {
   margin: 0;
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--color-text);
   line-height: 1.3;
-  text-wrap: balance;
-}
-
-.card-subtitle {
-  margin: 0;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  line-height: 1.35;
-  text-wrap: pretty;
 }
 
 /* --------------------------------------------------------------------------
@@ -278,17 +249,17 @@
 .zone-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .zone-card {
   display: flex;
   align-items: center;
   position: relative;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 0.75rem 1rem;
-  min-height: 48px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  min-height: 40px;
   background-color: var(--color-surface);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -302,8 +273,7 @@
 
 .zone-card.is-selected {
   border-color: var(--color-primary);
-  background-color: var(--color-primary-light);
-  box-shadow: 0 0 0 1px var(--color-primary);
+  background-color: var(--color-primary-subtle);
 }
 
 .zone-radio-input {
@@ -320,13 +290,13 @@
 
 .zone-card:focus-within {
   outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .zone-card-body {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   width: 100%;
 }
 
@@ -334,13 +304,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-xs);
   background-color: var(--color-surface-subtle);
   border: 1px solid var(--color-border);
   font-weight: 700;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-text);
   transition: all var(--transition-fast);
 }
@@ -353,65 +323,59 @@
 
 .zone-name {
   font-weight: 600;
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
   color: var(--color-text);
 }
 
 .zone-card.is-selected .zone-name {
-  color: var(--color-primary-dark, var(--color-primary));
+  color: var(--color-primary);
 }
 
-/* Room Identifier Live Preview Badge */
-.room-identifier-preview {
+/* Room Identifier Compact Row */
+.room-identifier-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
+  gap: 8px;
+  padding: 6px 10px;
   background-color: var(--color-surface-subtle);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  margin-top: 0.25rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  flex-wrap: wrap;
 }
 
-.preview-label {
-  font-size: var(--font-size-xs);
+.room-id-label {
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.room-id-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.room-id-badge code {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  padding: 1px 6px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-xs);
+}
+
+.room-id-pattern {
+  font-size: 0.6875rem;
   color: var(--color-text-muted);
 }
 
-.preview-value.ready {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.preview-badge {
-  display: inline-block;
-  padding: 0.25rem 0.625rem;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono, monospace);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  color: var(--color-primary);
-  letter-spacing: 0.02em;
-}
-
-.preview-status {
-  font-size: var(--font-size-xs);
-  color: var(--color-success, #16a34a);
-  font-weight: 500;
-}
-
-.preview-value.pending {
-  font-size: var(--font-size-xs);
+.room-id-placeholder {
   color: var(--color-text-muted);
   font-style: italic;
+  font-size: 0.75rem;
 }
 
 .card-body-stack {

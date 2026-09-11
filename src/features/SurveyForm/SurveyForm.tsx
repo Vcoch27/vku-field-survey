@@ -60,6 +60,8 @@ export function SurveyForm({
   const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<{
     zone?: string;
+    building?: string;
+    roomNumber?: string;
     category?: string;
     conditionRating?: string;
   }>({});
@@ -430,25 +432,7 @@ export function SurveyForm({
         {/* Section: Location */}
         <section className="form-card">
           <div className="card-header">
-            <div className="card-header-icon" aria-hidden="true">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-            </div>
-            <div className="card-header-titles">
-              <h2 className="card-title">Location</h2>
-              <p className="card-subtitle">Specify campus zone, building, and room location</p>
-            </div>
+            <h2 className="card-title">Location</h2>
           </div>
 
           <div className="card-body-stack">
@@ -513,12 +497,12 @@ export function SurveyForm({
               )}
             </fieldset>
 
-            {/* Building and Room Number Grid */}
-            <div className="grid-location">
+            {/* Building & Room Fields */}
+            <div className="form-row-2col">
               <div className="input-field">
                 <label htmlFor="building" className="field-label">
-                  Building
-                  <span className="field-hint">e.g. A, B, C, D1, D2, E1, E2</span>
+                  Building <span className="field-required">*</span>
+                  <span className="field-hint">e.g. A, B, C, D1, D2</span>
                 </label>
                 <input
                   id="building"
@@ -527,11 +511,26 @@ export function SurveyForm({
                   onChange={(e) => {
                     onFieldEdit();
                     setBuilding(e.target.value);
+                    if (validationErrors.building) {
+                      setValidationErrors((prev) => ({ ...prev, building: undefined }));
+                    }
                   }}
-                  placeholder="e.g. A, B, C, D1, D2, E1, E2"
-                  className="form-control"
+                  placeholder="e.g. A, B, C, D1"
+                  className={`form-control ${validationErrors.building ? 'is-invalid' : ''}`}
+                  aria-invalid={Boolean(validationErrors.building)}
+                  aria-describedby={
+                    validationErrors.building ? 'building-error' : 'building-hint'
+                  }
                   autoComplete="off"
                 />
+                <span id="building-hint" className="field-hint">
+                  Building code (letters and optional numbers).
+                </span>
+                {validationErrors.building && (
+                  <p id="building-error" className="field-error" role="alert">
+                    {validationErrors.building}
+                  </p>
+                )}
               </div>
 
               <div className="input-field">
@@ -559,17 +558,14 @@ export function SurveyForm({
             </div>
 
             {/* Live Room Identifier Preview */}
-            <div className="room-identifier-preview" aria-live="polite">
-              <span className="preview-label">Room Identifier</span>
+            <div className="room-identifier-row" aria-live="polite">
+              <span className="room-id-tag-label">Room Identifier:</span>
               {roomIdentifier ? (
-                <div className="preview-value ready">
-                  <span className="preview-badge" data-testid="room-identifier-badge">
-                    {roomIdentifier}
-                  </span>
-                  <span className="preview-status">VKU standard format</span>
-                </div>
+                <span className="room-id-badge ready" data-testid="room-identifier-badge">
+                  {roomIdentifier}
+                </span>
               ) : (
-                <div className="preview-value pending">Select zone and enter building + room</div>
+                <span className="room-id-placeholder">Select zone and enter building + room</span>
               )}
             </div>
 
@@ -588,26 +584,7 @@ export function SurveyForm({
         {/* Section: Equipment Details */}
         <section className="form-card">
           <div className="card-header">
-            <div className="card-header-icon" aria-hidden="true">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                <line x1="8" y1="21" x2="16" y2="21" />
-                <line x1="12" y1="17" x2="12" y2="21" />
-              </svg>
-            </div>
-            <div className="card-header-titles">
-              <h2 className="card-title">Equipment Details</h2>
-              <p className="card-subtitle">Asset category and physical condition assessment</p>
-            </div>
+            <h2 className="card-title">Equipment Details</h2>
           </div>
 
           <div className="card-body-stack">
@@ -704,30 +681,7 @@ export function SurveyForm({
         {/* Section: Defect Notes */}
         <section className="form-card">
           <div className="card-header">
-            <div className="card-header-icon" aria-hidden="true">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <polyline points="10 9 9 9 8 9" />
-              </svg>
-            </div>
-            <div className="card-header-titles">
-              <h2 className="card-title">Defect Notes</h2>
-              <p className="card-subtitle">
-                Document any damage, defect observations, or maintenance needs
-              </p>
-            </div>
+            <h2 className="card-title">Defect Notes</h2>
           </div>
 
           <div className="input-field">
@@ -751,25 +705,7 @@ export function SurveyForm({
         {/* Section: Photo Documentation */}
         <section className="form-card">
           <div className="card-header">
-            <div className="card-header-icon" aria-hidden="true">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
-            </div>
-            <div className="card-header-titles">
-              <h2 className="card-title">Photo Documentation</h2>
-              <p className="card-subtitle">Visual photo attachment for field record</p>
-            </div>
+            <h2 className="card-title">Photo Documentation</h2>
           </div>
 
           {photoError && (

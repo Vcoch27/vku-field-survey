@@ -193,24 +193,41 @@ export function RecordsPage({
 
   return (
     <div className="page-container records-page">
-      <header className="page-header-row">
-        <div>
-          <p className="eyebrow">Inspection history</p>
-          <h1 className="page-title">Records</h1>
-          <p className="page-subtitle">Review submitted inspections and resolve delivery issues.</p>
+      <header className="page-header-compact">
+        <div className="page-header-titles">
+          <h1 className="page-title-compact">Records</h1>
         </div>
-        <div className="header-actions">
+        <div className="page-header-actions">
           <button
             type="button"
             onClick={handleSyncCloud}
             disabled={isSyncingCloud}
-            className="btn-sync-cloud"
+            className="btn-sync-compact"
             aria-label="Sync with Google Sheets and reconcile records"
-            title="Synchronize with Google Sheets"
+            title="Đồng bộ với Google Sheets"
           >
-            {isSyncingCloud ? '🔄 Syncing…' : '🔄 Sync Cloud'}
+            <svg
+              className={`sync-icon ${isSyncingCloud ? 'spinning' : ''}`}
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+              <path d="M16 21h5v-5" />
+            </svg>
+            <span>{isSyncingCloud ? 'Đang đồng bộ…' : 'Đồng bộ Sheets'}</span>
           </button>
-          <button type="button" onClick={() => navigate('/survey')} className="btn-new-record">+ New</button>
+          <button type="button" onClick={() => navigate('/survey')} className="btn-new-compact">
+            + New
+          </button>
         </div>
       </header>
 
@@ -221,95 +238,178 @@ export function RecordsPage({
         </div>
       )}
 
-      {actionError && <div className="alert-box alert-error" role="alert"><span>{actionError}</span><button type="button" className="alert-close" aria-label="Dismiss error" onClick={() => setActionError(null)}>×</button></div>}
+      {actionError && (
+        <div className="alert-box alert-error" role="alert">
+          <span>{actionError}</span>
+          <button type="button" className="alert-close" aria-label="Dismiss error" onClick={() => setActionError(null)}>×</button>
+        </div>
+      )}
 
-      <div className="status-filter-row" role="group" aria-label="Filter records by status">
-        {STATUS_OPTIONS.map((option) => {
-          const count = option.value === 'ALL' ? view.status.total
-            : option.value === 'PENDING' ? view.status.pending
-              : option.value === 'SYNCING' ? view.status.syncing
-                : option.value === 'FAILED' ? view.status.failed : view.status.synced;
-          return <button key={option.value} type="button" aria-pressed={filters.status === option.value} className={filters.status === option.value ? 'active' : ''} onClick={() => setFilter('status', option.value)}>{option.label}<span>{count}</span></button>;
-        })}
-      </div>
+      <div className="records-unified-toolbar">
+        <div className="status-segmented-control" role="group" aria-label="Filter records by status">
+          {STATUS_OPTIONS.map((option) => {
+            const count = option.value === 'ALL' ? view.status.total
+              : option.value === 'PENDING' ? view.status.pending
+                : option.value === 'SYNCING' ? view.status.syncing
+                  : option.value === 'FAILED' ? view.status.failed : view.status.synced;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={filters.status === option.value}
+                className={`segmented-tab ${filters.status === option.value ? 'active' : ''}`}
+                onClick={() => setFilter('status', option.value)}
+              >
+                {option.label}<span>{count}</span>
+              </button>
+            );
+          })}
+        </div>
 
-      <div className="record-filter-toolbar">
-        <details className="filter-disclosure">
-          <summary>Filters{activeFilterLabels.length > 0 ? ` (${activeFilterLabels.length})` : ''}</summary>
-          <div className="filter-panel">
-            <label>Campus zone<select aria-label="Filter by campus zone" value={filters.zone} onChange={(event) => setFilter('zone', event.target.value as CampusZone | 'ALL')}><option value="ALL">All Zones</option><option value="K">K — Khu Hàn</option><option value="V">V — Khu Việt</option></select></label>
-            <label>Category<select aria-label="Filter by category" value={filters.category} onChange={(event) => setFilter('category', event.target.value as SurveyCategory | 'ALL')}><option value="ALL">All Categories</option>{SURVEY_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
-            <label className="poor-filter"><input type="checkbox" checked={filters.poorConditionOnly} onChange={(event) => setFilter('poorConditionOnly', event.target.checked)} />Poor condition (1–2★)</label>
-          </div>
-        </details>
-        <div className="toolbar-actions">
-          <button
-            type="button"
-            className="btn-toolbar-sync"
-            onClick={handleSyncCloud}
-            disabled={isSyncingCloud}
-            title="Đồng bộ từ Google Sheets"
-            aria-label="Đồng bộ từ Google Sheets"
-          >
-            {isSyncingCloud ? '🔄 Đang đồng bộ…' : '🔄 Đồng bộ Sheets'}
-          </button>
-          <label className="sort-control"><span className="sr-only">Sort records by time</span><select aria-label="Sort records by time" value={filters.sort} onChange={(event) => setFilter('sort', event.target.value as RecordSortOrder)}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
+        <div className="toolbar-controls-right">
+          <details className="filter-disclosure-compact">
+            <summary className={`filter-toggle-btn ${activeFilterLabels.length > 0 ? 'active' : ''}`}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+              <span>Filters{activeFilterLabels.length > 0 ? ` (${activeFilterLabels.length})` : ''}</span>
+            </summary>
+            <div className="filter-dropdown-panel">
+              <label>
+                Campus zone
+                <select aria-label="Filter by campus zone" value={filters.zone} onChange={(event) => setFilter('zone', event.target.value as CampusZone | 'ALL')}>
+                  <option value="ALL">All Zones</option>
+                  <option value="K">K — Khu Hàn</option>
+                  <option value="V">V — Khu Việt</option>
+                </select>
+              </label>
+              <label>
+                Category
+                <select aria-label="Filter by category" value={filters.category} onChange={(event) => setFilter('category', event.target.value as SurveyCategory | 'ALL')}>
+                  <option value="ALL">All Categories</option>
+                  {SURVEY_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
+                </select>
+              </label>
+              <label className="poor-filter">
+                <input type="checkbox" checked={filters.poorConditionOnly} onChange={(event) => setFilter('poorConditionOnly', event.target.checked)} />
+                <span>Poor condition (1–2★)</span>
+              </label>
+            </div>
+          </details>
+
+          <label className="sort-control-compact">
+            <span className="sr-only">Sort records by time</span>
+            <select aria-label="Sort records by time" value={filters.sort} onChange={(event) => setFilter('sort', event.target.value as RecordSortOrder)}>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </label>
         </div>
       </div>
 
       {activeFilterLabels.length > 0 && (
-        <div className="active-filter-summary" role="status"><span>{activeFilterLabels.join(' · ')} <strong>{displayedRecords.length} {displayedRecords.length === 1 ? 'record' : 'records'}</strong></span><button type="button" onClick={() => setFilters(DEFAULT_RECORD_FILTERS)}>Clear filters</button></div>
+        <div className="active-filter-summary" role="status">
+          <span>{activeFilterLabels.join(' · ')} <strong>{displayedRecords.length} {displayedRecords.length === 1 ? 'record' : 'records'}</strong></span>
+          <button type="button" onClick={() => setFilters(DEFAULT_RECORD_FILTERS)}>Clear filters</button>
+        </div>
       )}
 
-      {loading ? <div className="loading-card">Loading local records…</div>
-        : displayedRecords.length === 0 ? (
-          <div className="empty-state-card compact-empty"><p className="empty-title">{records.length === 0 ? 'No survey records yet' : 'No records match these filters'}</p><p className="empty-desc">{records.length === 0 ? 'Completed inspections will appear here.' : 'Clear or change a filter to see more inspections.'}</p>{records.length === 0 && <button type="button" onClick={() => navigate('/survey')} className="btn-primary-action">Start First Survey</button>}</div>
-        ) : (
-          <div className="record-groups" role="feed" aria-label="Survey records list">
-            {groups.map((group) => (
-              <section key={group.label} className="record-date-group" aria-labelledby={`group-${group.label.toLowerCase()}`}>
-                <h2 id={`group-${group.label.toLowerCase()}`}>{group.label}</h2>
-                <div className="records-list">
-                  {group.records.map((record) => {
-                    const data = record.surveyData;
-                    const room = formatFullRoomIdentifier(data) ?? 'Unknown room';
-                    const retryBlocked = record.failureDisposition === 'REQUIRES_ATTENTION';
-                    return (
-                      <article key={record.id} className={`record-item-card ${record.syncStatus === 'SYNC_FAILED' ? 'card-failed' : ''}`}>
-                        <Link href={`/records/${record.id}`} className="record-card-link" aria-label={`Open inspection ${room}, ${data.category}, ${statusLabel(record.syncStatus)}`}>
-                          <div className="record-header"><strong className="record-room-pill">{room}</strong><span className={`status-pill ${record.syncStatus.toLowerCase()}`}>{statusLabel(record.syncStatus)}</span></div>
-                          <div className="record-summary-line"><span>{data.category}</span><span className="record-stars" aria-label={`${data.conditionRating} out of 5 stars`}>{'★'.repeat(data.conditionRating)}{'☆'.repeat(5 - data.conditionRating)}</span></div>
-                          {data.defectNotes && <p className="record-defect-preview">“{data.defectNotes}”</p>}
-                          {record.syncStatus === 'SYNC_FAILED' && record.lastErrorMessage && <p className="record-error-snippet">{record.lastErrorMessage}</p>}
-                          <div className="record-footer">
-                            <time dateTime={record.timestamp}>{formatTimestamp(record.timestamp)}</time>
-                            <div className="record-badges">
-                              {data.photo && <span className="photo-indicator" title="Photo attached" aria-label="Photo attached">▣</span>}
-                              {data.gps ? (
-                                <span
-                                  className="gps-verified-tag"
-                                  title={`Tọa độ GPS: ${data.gps.latitude.toFixed(5)}°, ${data.gps.longitude.toFixed(5)}°`}
-                                  aria-label="GPS verified"
-                                >
-                                  📍 {data.gps.latitude.toFixed(4)}°, {data.gps.longitude.toFixed(4)}°
-                                </span>
-                              ) : (
-                                <span className="gps-missing-tag" title="Chưa có dữ liệu GPS" aria-label="Chưa có GPS">
-                                  📍 Chưa có GPS
-                                </span>
-                              )}
-                            </div>
+      {loading ? (
+        <div className="loading-card">Loading local records…</div>
+      ) : displayedRecords.length === 0 ? (
+        <div className="empty-state-card compact-empty">
+          <p className="empty-title">{records.length === 0 ? 'No survey records yet' : 'No records match these filters'}</p>
+          <p className="empty-desc">{records.length === 0 ? 'Completed inspections will appear here.' : 'Clear or change a filter to see more inspections.'}</p>
+          {records.length === 0 && (
+            <button type="button" onClick={() => navigate('/survey')} className="btn-primary-action">Start First Survey</button>
+          )}
+        </div>
+      ) : (
+        <div className="record-groups" role="feed" aria-label="Survey records list">
+          {groups.map((group) => (
+            <section key={group.label} className="record-date-group" aria-labelledby={`group-${group.label.toLowerCase()}`}>
+              <h2 id={`group-${group.label.toLowerCase()}`} className="date-group-heading">{group.label}</h2>
+              <div className="records-list">
+                {group.records.map((record) => {
+                  const data = record.surveyData;
+                  const room = formatFullRoomIdentifier(data) ?? 'Unknown room';
+                  const retryBlocked = record.failureDisposition === 'REQUIRES_ATTENTION';
+                  return (
+                    <article key={record.id} className={`record-item-card ${record.syncStatus === 'SYNC_FAILED' ? 'card-failed' : ''}`}>
+                      <Link href={`/records/${record.id}`} className="record-card-link" aria-label={`Open inspection ${room}, ${data.category}, ${statusLabel(record.syncStatus)}`}>
+                        <div className="record-row-top">
+                          <div className="record-room-info">
+                            <strong className="record-room-code">{room}</strong>
+                            <span className="record-separator">·</span>
+                            <span className="record-category-label">{data.category}</span>
+                            <span className="record-stars" aria-label={`${data.conditionRating} out of 5 stars`}>
+                              {'★'.repeat(data.conditionRating)}{'☆'.repeat(5 - data.conditionRating)}
+                            </span>
                           </div>
-                        </Link>
-                        <details className="record-menu"><summary aria-label={`More actions for ${room}`}>⋯</summary><div className="record-menu-popover">{record.syncStatus === 'SYNC_FAILED' && <button type="button" disabled={retryingId === record.id || retryBlocked} onClick={(event) => handleRetry(record, event)}>{retryingId === record.id ? 'Retrying…' : retryBlocked ? 'Review required' : 'Retry sync'}</button>}<button type="button" className="danger-action" onClick={(event) => handleDelete(record, event)}>{record.syncStatus === 'SYNCED' ? 'Delete local copy' : 'Delete local record'}</button></div></details>
-                      </article>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-          </div>
-        )}
+                          <span className={`status-indicator-tag ${record.syncStatus.toLowerCase()}`}>
+                            <span className="status-indicator-dot" aria-hidden="true" />
+                            <span>{statusLabel(record.syncStatus)}</span>
+                          </span>
+                        </div>
+
+                        {data.defectNotes && <p className="record-defect-snippet">“{data.defectNotes}”</p>}
+                        {record.syncStatus === 'SYNC_FAILED' && record.lastErrorMessage && (
+                          <p className="record-error-snippet">{record.lastErrorMessage}</p>
+                        )}
+
+                        <div className="record-row-bottom">
+                          <time dateTime={record.timestamp}>{formatTimestamp(record.timestamp)}</time>
+                          <div className="record-meta-tags">
+                            {data.photo && (
+                              <span className="photo-tag-compact" title="Photo attached" aria-label="Photo attached">
+                                Photo
+                              </span>
+                            )}
+                            {data.gps ? (
+                              <span
+                                className="gps-tag-compact verified"
+                                title={`Tọa độ GPS: ${data.gps.latitude.toFixed(5)}°, ${data.gps.longitude.toFixed(5)}°`}
+                                aria-label="GPS verified"
+                              >
+                                GPS {data.gps.latitude.toFixed(4)}°, {data.gps.longitude.toFixed(4)}°
+                              </span>
+                            ) : (
+                              <span className="gps-tag-compact missing" title="Chưa có dữ liệu GPS" aria-label="Chưa có GPS">
+                                No GPS
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                      <details className="record-menu">
+                        <summary aria-label={`More actions for ${room}`}>⋯</summary>
+                        <div className="record-menu-popover">
+                          {record.syncStatus === 'SYNC_FAILED' && (
+                            <button
+                              type="button"
+                              disabled={retryingId === record.id || retryBlocked}
+                              onClick={(event) => handleRetry(record, event)}
+                            >
+                              {retryingId === record.id ? 'Retrying…' : retryBlocked ? 'Review required' : 'Retry sync'}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="danger-action"
+                            onClick={(event) => handleDelete(record, event)}
+                          >
+                            {record.syncStatus === 'SYNCED' ? 'Delete local copy' : 'Delete local record'}
+                          </button>
+                        </div>
+                      </details>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -73,12 +73,11 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
   return (
     <div className="page-container home-page">
       <section className="home-intro" aria-labelledby="home-title">
-        <p className="eyebrow">Today&apos;s field work</p>
         <h1 className="home-title" id="home-title">
-          What needs attention next?
+          Field Survey Overview
         </h1>
         <p className="home-subtitle">
-          Capture inspections, protect work offline, and confirm delivery.
+          Capture inspections, protect work offline, and sync to Google Sheets.
         </p>
       </section>
 
@@ -172,7 +171,7 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
                       {record.surveyData.gps && (
                         <span className="recent-gps-badge" title="GPS verified">
                           {' '}
-                          · 📍 {record.surveyData.gps.latitude.toFixed(3)}°, {record.surveyData.gps.longitude.toFixed(3)}°
+                          · GPS {record.surveyData.gps.latitude.toFixed(3)}°, {record.surveyData.gps.longitude.toFixed(3)}°
                         </span>
                       )}
                     </span>
@@ -217,7 +216,21 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
                 className="btn-download-apk"
                 aria-label="Download Android APK package"
               >
-                <span aria-hidden="true">⬇️</span>
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
                 <span>Download APK (16.3 MB)</span>
               </a>
               <span className="download-hint">
