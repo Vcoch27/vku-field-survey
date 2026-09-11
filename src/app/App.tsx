@@ -44,6 +44,9 @@ function AppContent({ runtime }: { readonly runtime: AppRuntime }) {
 
     void runtime.networkStatus.getNetworkStatus().then((status) => {
       setIsConnected(status.isConnected);
+      if (status.isConnected) {
+        void runtime.syncTriggerAdapter.dispatchTrigger('MANUAL');
+      }
     });
     const unsubNetwork = runtime.networkStatus.subscribe((status) => {
       setIsConnected(status.isConnected);

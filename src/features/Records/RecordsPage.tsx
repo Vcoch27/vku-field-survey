@@ -27,6 +27,7 @@ export interface RecordsPageProps {
   readonly storage: SurveyStoragePort;
   readonly orchestrator?: SyncOrchestrator;
   readonly initialQuery?: string;
+  readonly autoSyncOnMount?: boolean;
 }
 
 const STATUS_OPTIONS: readonly { value: RecordStatusFilter; label: string }[] = [
@@ -68,7 +69,12 @@ function formatTimestamp(timestamp: string): string {
   });
 }
 
-export function RecordsPage({ storage, orchestrator, initialQuery }: RecordsPageProps) {
+export function RecordsPage({
+  storage,
+  orchestrator,
+  initialQuery,
+  autoSyncOnMount = true,
+}: RecordsPageProps) {
   const { navigate } = useRouter();
   const [records, setRecords] = useState<readonly SurveySubmission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +92,28 @@ export function RecordsPage({ storage, orchestrator, initialQuery }: RecordsPage
     loadRecords();
     return globalSyncEventHub.subscribeStorage(loadRecords);
   }, [loadRecords]);
+
+  // Automatically trigger cloud reconciliation in the background upon viewing records
+  useEffect(() => {
+    let isMounted = true;
+    if (autoSyncOnMount && orchestrator) {
+      void orchestrator
+        .synchronize()
+        .then((result) => {
+          if (!isMounted) return;
+          loadRecords();
+          if (result.reconciliation && result.reconciliation.importedCount > 0) {
+            setSyncFeedback(
+              `Đã đồng bộ ${result.reconciliation.importedCount} bản ghi từ Google Sheets.`
+            );
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [autoSyncOnMount, orchestrator, loadRecords]);
 
   const view = useMemo(() => createSubmissionViewModel(records), [records]);
   const displayedRecords = useMemo(() => filterSubmissionRecords(records, filters), [records, filters]);
@@ -214,7 +242,19 @@ export function RecordsPage({ storage, orchestrator, initialQuery }: RecordsPage
             <label className="poor-filter"><input type="checkbox" checked={filters.poorConditionOnly} onChange={(event) => setFilter('poorConditionOnly', event.target.checked)} />Poor condition (1–2★)</label>
           </div>
         </details>
-        <label className="sort-control"><span className="sr-only">Sort records by time</span><select aria-label="Sort records by time" value={filters.sort} onChange={(event) => setFilter('sort', event.target.value as RecordSortOrder)}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
+        <div className="toolbar-actions">
+          <button
+            type="button"
+            className="btn-toolbar-sync"
+            onClick={handleSyncCloud}
+            disabled={isSyncingCloud}
+            title="Đồng bộ từ Google Sheets"
+            aria-label="Đồng bộ từ Google Sheets"
+          >
+            {isSyncingCloud ? '🔄 Đang đồng bộ…' : '🔄 Đồng bộ Sheets'}
+          </button>
+          <label className="sort-control"><span className="sr-only">Sort records by time</span><select aria-label="Sort records by time" value={filters.sort} onChange={(event) => setFilter('sort', event.target.value as RecordSortOrder)}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
+        </div>
       </div>
 
       {activeFilterLabels.length > 0 && (
@@ -243,8 +283,22 @@ export function RecordsPage({ storage, orchestrator, initialQuery }: RecordsPage
                           {record.syncStatus === 'SYNC_FAILED' && record.lastErrorMessage && <p className="record-error-snippet">{record.lastErrorMessage}</p>}
                           <div className="record-footer">
                             <time dateTime={record.timestamp}>{formatTimestamp(record.timestamp)}</time>
-                            {data.photo && <span className="photo-indicator" title="Photo attached" aria-label="Photo attached">▣</span>}
-                            {data.gps && <span className="gps-verified-tag" title="GPS coordinates verified" aria-label="GPS verified">📍 GPS</span>}
+                            <div className="record-badges">
+                              {data.photo && <span className="photo-indicator" title="Photo attached" aria-label="Photo attached">▣</span>}
+                              {data.gps ? (
+                                <span
+                                  className="gps-verified-tag"
+                                  title={`Tọa độ GPS: ${data.gps.latitude.toFixed(5)}°, ${data.gps.longitude.toFixed(5)}°`}
+                                  aria-label="GPS verified"
+                                >
+                                  📍 {data.gps.latitude.toFixed(4)}°, {data.gps.longitude.toFixed(4)}°
+                                </span>
+                              ) : (
+                                <span className="gps-missing-tag" title="Chưa có dữ liệu GPS" aria-label="Chưa có GPS">
+                                  📍 Chưa có GPS
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </Link>
                         <details className="record-menu"><summary aria-label={`More actions for ${room}`}>⋯</summary><div className="record-menu-popover">{record.syncStatus === 'SYNC_FAILED' && <button type="button" disabled={retryingId === record.id || retryBlocked} onClick={(event) => handleRetry(record, event)}>{retryingId === record.id ? 'Retrying…' : retryBlocked ? 'Review required' : 'Retry sync'}</button>}<button type="button" className="danger-action" onClick={(event) => handleDelete(record, event)}>{record.syncStatus === 'SYNCED' ? 'Delete local copy' : 'Delete local record'}</button></div></details>

@@ -40,7 +40,9 @@ function copyFiltered(src, dest) {
 copyFiltered(DIST_DIR, STAGING_DIR);
 
 const extraArgs = process.argv.slice(2).join(' ');
-const uploadCmd = `npx @capgo/cli bundle upload com.vku.field.survey.vku.field.survey --path ./dist-ota --channel production ${extraArgs}`.trim();
+const hasBundleArg = extraArgs.includes('--bundle') || extraArgs.includes('-b') || extraArgs.includes('--auto-bump');
+const bundleFlag = hasBundleArg ? '' : '--auto-bump';
+const uploadCmd = `npx @capgo/cli bundle upload com.vku.field.survey.vku.field.survey --path ./dist-ota --channel production ${bundleFlag} ${extraArgs}`.trim();
 
 console.log(`📤 Uploading OTA bundle to Capgo Cloud:\n   ${uploadCmd}`);
 try {

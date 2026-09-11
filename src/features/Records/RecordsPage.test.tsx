@@ -80,7 +80,7 @@ describe('RecordsPage', () => {
     const user = userEvent.setup();
     const storage = storageFor([records[2]]);
     const orchestrator = { synchronize: vi.fn().mockResolvedValue({ processedCount: 1, syncedCount: 1, failedCount: 0, recoveredStaleCount: 0, errors: [] }) } as unknown as SyncOrchestrator;
-    render(<RouterProvider initialPath="/records"><RecordsPage storage={storage} orchestrator={orchestrator} /></RouterProvider>);
+    render(<RouterProvider initialPath="/records"><RecordsPage storage={storage} orchestrator={orchestrator} autoSyncOnMount={false} /></RouterProvider>);
     await waitFor(() => expect(screen.getByText('V.A-303')).toBeTruthy());
     const article = screen.getByText('V.A-303').closest('article');
     if (!article) throw new Error('record article missing');

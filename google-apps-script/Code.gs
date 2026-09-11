@@ -130,18 +130,29 @@ function handleListRecords(e) {
         : (photoCapturedAtVal ? String(photoCapturedAtVal) : null);
 
       let photoUrl = getVal('photo_url');
-      if (!photoUrl || String(photoUrl).trim() === '') {
+      if (!photoUrl || !String(photoUrl).trim().startsWith('http')) {
         try {
           const photoColIdx = colMap['photo_url'];
           if (photoColIdx !== undefined) {
-            const richText = sheet.getRange(r + 2, photoColIdx + 1).getRichTextValue();
+            const cell = sheet.getRange(r + 2, photoColIdx + 1);
+            const richText = cell.getRichTextValue();
             if (richText && richText.getLinkUrl()) {
               photoUrl = richText.getLinkUrl();
+            } else {
+              const formula = cell.getFormula();
+              const match = formula && formula.match(/HYPERLINK\(\s*"([^"]+)"/i);
+              if (match) {
+                photoUrl = match[1];
+              }
             }
           }
         } catch (rtErr) {
           // ignore
         }
+      }
+
+      if (photoUrl && !String(photoUrl).trim().startsWith('http')) {
+        photoUrl = null;
       }
 
       const lat = getVal('latitude');

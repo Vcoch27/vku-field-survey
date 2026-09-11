@@ -172,7 +172,7 @@ export function HomePage({ storage, isConnected }: HomePageProps) {
                       {record.surveyData.gps && (
                         <span className="recent-gps-badge" title="GPS verified">
                           {' '}
-                          · 📍 GPS
+                          · 📍 {record.surveyData.gps.latitude.toFixed(3)}°, {record.surveyData.gps.longitude.toFixed(3)}°
                         </span>
                       )}
                     </span>

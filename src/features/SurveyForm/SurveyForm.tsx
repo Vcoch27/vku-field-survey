@@ -15,6 +15,7 @@ import {
 import { autosaveDraft } from '../../domain/autosaveDraft';
 import { recoverDraft } from '../../domain/recoverDraft';
 import { submitSurveyOffline } from '../../domain/submitSurveyOffline';
+import { GpsVisualCard } from '../Gps/GpsVisualCard.tsx';
 import './SurveyForm.css';
 
 export interface SurveyFormProps {
@@ -573,83 +574,14 @@ export function SurveyForm({
             </div>
 
             {/* GPS Field Coordinates */}
-            <div className="gps-section-block">
-              <div className="gps-header-row">
-                <div className="gps-title-group">
-                  <span className="gps-title">Field GPS Verification</span>
-                  <span className="gps-subtitle">Verify precise geospatial coordinates for this inspection</span>
-                </div>
-                {gps ? (
-                  <button
-                    type="button"
-                    onClick={handleCaptureGps}
-                    className="btn-gps-refresh"
-                    disabled={isLocating}
-                    aria-label="Refresh GPS coordinates"
-                  >
-                    {isLocating ? 'Locating…' : '🔄 Refresh GPS'}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleCaptureGps}
-                    className="btn-gps-capture"
-                    disabled={isLocating}
-                    aria-label="Capture GPS coordinates"
-                  >
-                    {isLocating ? '⏳ Locating…' : '📍 Capture GPS Location'}
-                  </button>
-                )}
-              </div>
-
-              {gps ? (
-                <div className="gps-badge-card">
-                  <div className="gps-badge-info">
-                    <div className="gps-coords-display">
-                      <span className="gps-coords-text">
-                        {gps.latitude.toFixed(6)}°, {gps.longitude.toFixed(6)}°
-                      </span>
-                      {typeof gps.accuracy === 'number' && (
-                        <span className="gps-accuracy-pill">±{Math.round(gps.accuracy)}m</span>
-                      )}
-                    </div>
-                    <span className="gps-meta-text">
-                      {gps.capturedAt
-                        ? `Captured at ${new Date(gps.capturedAt).toLocaleTimeString()}`
-                        : 'GPS Coordinates Attached'}
-                    </span>
-                  </div>
-                  <div className="gps-badge-actions">
-                    <a
-                      href={`https://www.google.com/maps?q=${gps.latitude},${gps.longitude}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="gps-map-action"
-                      title="View on Google Maps"
-                    >
-                      🗺️ Map
-                    </a>
-                    <button
-                      type="button"
-                      onClick={handleRemoveGps}
-                      className="btn-gps-remove"
-                      aria-label="Remove GPS coordinates"
-                      title="Remove GPS coordinates"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <p className="gps-hint-message">
-                  {gpsError ? (
-                    <span className="gps-error-message">{gpsError}</span>
-                  ) : (
-                    'Optional: Tap "Capture GPS Location" to record latitude/longitude coordinates.'
-                  )}
-                </p>
-              )}
-            </div>
+            <GpsVisualCard
+              gps={gps}
+              isLocating={isLocating}
+              error={gpsError}
+              editable={true}
+              onCapture={handleCaptureGps}
+              onRemove={handleRemoveGps}
+            />
           </div>
         </section>
 

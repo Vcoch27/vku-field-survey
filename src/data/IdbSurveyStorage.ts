@@ -503,11 +503,11 @@ export class IdbSurveyStorage implements SurveyStoragePort {
             photo: null,
             remotePhotoUrl: remote.photoUrl || null,
             gps:
-              remote.latitude !== null && remote.longitude !== null
+              typeof remote.latitude === 'number' && typeof remote.longitude === 'number'
                 ? {
                     latitude: remote.latitude,
                     longitude: remote.longitude,
-                    accuracy: remote.gpsAccuracy ?? undefined,
+                    accuracy: typeof remote.gpsAccuracy === 'number' ? remote.gpsAccuracy : undefined,
                   }
                 : null,
           },
