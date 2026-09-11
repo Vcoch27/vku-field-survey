@@ -8,76 +8,82 @@ Offline-first campus equipment and facility inspection for the web and Android.
 
 ## Overview
 
-VKU Field Survey helps field staff record campus equipment conditions even when connectivity is unavailable. Drafts and queued submissions are stored locally in IndexedDB. When connectivity returns, one synchronization use case processes the durable queue sequentially and only marks a record as synced after a positive acknowledgement from the configured destination.
+VKU Field Survey helps university facility inspectors and field staff inspect and record campus equipment conditions anytime—even completely offline. Inspection drafts, captured photos, and GPS metadata are stored locally in IndexedDB. When network connectivity is restored, the unified synchronization orchestrator pushes queued items sequentially to Google Sheets, reconciles remote changes, and sends a branded notification upon successful sync.
 
-The same React application is delivered as:
+The application runs seamlessly across:
 
-- an installable, standalone Progressive Web App (PWA);
-- an Android application packaged with Capacitor;
-- a responsive browser application for desktop and mobile.
+- **Progressive Web App (PWA):** Installable, standalone, offline App Shell with service worker precaching.
+- **Android Native App:** Packaged with Capacitor 8, integrating native Camera, GPS, Network, Local Notifications, and Capgo OTA auto-updater.
+- **Desktop & Mobile Web:** Clean, responsive, compact product UI accessible from any modern browser.
 
-The public deployment is served over HTTPS at [vkufieldsurvey.vanhoang.online](https://vkufieldsurvey.vanhoang.online). The deployed site represents the latest build published from the configured production branch.
+The production PWA is deployed over HTTPS at [vkufieldsurvey.vanhoang.online](https://vkufieldsurvey.vanhoang.online).
+
+---
 
 ## Core workflow
 
-1. Start a survey or resume an automatically saved draft.
-2. Select campus zone (`K` or `V`) and enter the building and room number.
-3. Select an equipment category: Hardware, Projector, AC, Electrical, or Furniture.
-4. Record a 1-5 star condition rating, defect notes, and a camera photo.
-5. Submit while online or offline. The record is durably queued on the device.
-6. Review its status in Records and retry items that need attention.
-7. Use Statistics to inspect ratings, equipment coverage, campus-zone coverage, and actionable follow-up items.
+1. **Start Survey or Resume Draft:** Begin a new inspection or resume an automatically autosaved draft.
+2. **Campus Zone & Room:** Select campus zone (`Khu Hàn` or `Khu Việt`) and enter building and room (auto-derived ID, e.g., `K.A-205`).
+3. **Equipment Category & Rating:** Select category (Hardware, Projector, AC, Electrical, Furniture) and record a 1–5 condition rating.
+4. **Defect Notes & Camera Photo:** Add notes and attach a photo (via native camera or file picker fallback).
+5. **Live GPS & Interactive Map:** Capture high-accuracy GPS coordinates (latitude, longitude, altitude, accuracy) with an interactive OpenStreetMap preview.
+6. **Offline Queueing:** Submit while online or offline. While offline, submissions stay securely in `PENDING_SYNC` without premature network errors.
+7. **Auto-Sync on Reconnect:** When internet returns, the background orchestrator automatically syncs pending records to Google Sheets and sends a branded native notification.
+8. **Cloud Reconciliation & Management:** View records categorized by recency, search/filter, inspect details, retry failed records, or manually sync with Google Sheets.
+9. **Analytics & Statistics:** Analyze ratings, equipment coverage, zone breakdown, and actionable maintenance alerts.
+
+---
 
 ## Features
 
-### Field survey
+### 📍 Field Survey & Geolocation
+- **Mobile-first Survey Form:** Form fields tailored for fast one-handed data entry in the field.
+- **Derived Room Identifiers:** Structured IDs like `K.A-205` derived without redundant database columns.
+- **GPS Capture & Map Visualizer:** One-tap GPS acquisition with live coordinates, accuracy radius, and embedded interactive OpenStreetMap pinpoint card.
+- **Photo Attachments:** Integrated camera capture with image compression and offline base64/blob storage.
+- **Durable Draft Recovery:** Auto-saves drafts on every edit; survives browser refreshes, tab closures, and app restarts.
 
-- Mobile-first survey form with location, category, rating, notes, and photo capture.
-- Derived room identifiers such as `K.A-205` without redundant persisted state.
-- Automatic draft persistence after meaningful changes.
-- Draft recovery after refresh and, while platform storage remains available, browser or app restart.
-- Web file-camera fallback and native Capacitor Camera integration.
+### 🔄 Offline-First & Two-Way Sync
+- **IndexedDB Persistence:** Complete offline persistence for drafts, photos, and inspection queues via `idb`.
+- **Durable Queue State Machine:** Strict transitions (`PENDING_SYNC` → `SYNCING` → `SYNCED` / `SYNC_FAILED`).
+- **Offline Guard:** Prevents unnecessary network attempts when offline; protects queued records from false error states.
+- **Auto-Sync on Network Reconnection:** Automatically detects network restoration (`ONLINE_EVENT`, `NATIVE_NETWORK_RECONNECT`) and syncs queued data in FIFO order.
+- **Two-Way Cloud Reconciliation:** Syncs submissions upward to Google Sheets and reconciles remote changes (identifies records removed or added on Google Sheets).
+- **At-Least-Once Delivery & Duplicate Protection:** Uses persistent UUIDs and positive acknowledgements to ensure zero data loss.
 
-### Offline-first data and synchronization
+### 🔔 Branded Native Notifications
+- **Status & Reconnect Alerts:** Dispatches local notifications when queued offline surveys are successfully uploaded.
+- **Brand Identity:** Styled with official VKU logo (`ic_vku_notification`, `ic_vku_logo`) and brand color `#0054A6`.
 
-- IndexedDB-backed drafts, photos, and submission queue through `idb`.
-- Durable queue states: `PENDING_SYNC`, `SYNCING`, `SYNCED`, and `SYNC_FAILED`.
-- UUID and timestamp on every queued submission.
-- Sequential dispatch with durable claiming to avoid concurrent duplicate processing.
-- Retry triggers for browser connectivity changes, supported Background Sync, application startup/resume, and native network changes.
-- Failed or unacknowledged submissions retain their local data.
-- Positive backend acknowledgement is required before a record becomes `SYNCED`.
+### ⚡ Capgo OTA (Over-The-Air) Updates
+- **Automatic App Updates:** Integrated `@capgo/capacitor-updater` enables instant background updates to the Android app without requiring a manual APK reinstall.
+- **Seamless Deployment:** `npm run capgo:upload` deploys new web bundles to production devices via Capgo Cloud.
 
-### Records and statistics
+### 📊 Records & Analytics Dashboard
+- **Grouped Records View:** Chronological grouping into Today, Yesterday, and Earlier.
+- **Multi-criteria Filtering:** Filter by sync status, equipment category, zone, or poor condition flag.
+- **Full Detail Inspection:** View timestamps, GPS coordinates, notes, full-size photos, and remote sync details.
+- **Facility Statistics:** Average ratings, inspection status counters, and zone-by-zone distribution charts.
 
-- Records grouped into Today, Yesterday, and Earlier.
-- Filtering by sync status, category, campus zone, and poor condition.
-- Newest/oldest sorting, full record details, contextual actions, and photo access.
-- Total survey count, average rating, and synchronization progress.
-- Rating, category, and campus-zone distributions.
-- Deterministic insights with drill-down links into the relevant records.
-
-### PWA and Android
-
-- Installable manifest with standalone display, responsive 192x192 and 512x512 icons, and VKU theme color `#0284C7`.
-- Service-worker App Shell precaching and offline boot/reload support.
-- Capacitor Android wrapper with Camera, Network, Local Notifications, and App lifecycle plugins.
-- Pre-built Android package ready for download and installation: [vku-field-survey.apk](https://vkufieldsurvey.vanhoang.online/downloads/vku-field-survey.apk) (v1.0.0, 16.3 MB, Android 7.0+).
-- Native notification on reconnection when pending offline inspections are synced successfully to Google Sheets.
-- Responsive layouts verified from narrow mobile widths through desktop widths.
+### 📱 PWA & Android Native Wrapper
+- **PWA Capabilities:** Standalone manifest, service-worker App Shell precaching, and full offline reload capability.
+- **Capacitor 8 Android Package:** Lightweight ~13.8 MB APK ready for Android 7.0+ devices ([Download APK](https://vkufieldsurvey.vanhoang.online/downloads/vku-field-survey.apk)).
+- **Clean UI / Anti-Slop:** Streamlined layout, collapsible filters, unified action bar, and clear typography hierarchy.
 
 ## Technology stack
 
-| Area               | Technology                                        |
-| ------------------ | ------------------------------------------------- |
-| UI                 | React 19, TypeScript 6                            |
-| Build              | Vite 8                                            |
-| PWA                | `vite-plugin-pwa`, Workbox, custom service worker |
-| Persistence        | IndexedDB through `idb`                           |
-| Native             | Capacitor 8, Camera, Network, and App plugins     |
-| Remote destination | Google Apps Script Web App and Google Sheets      |
-| Testing            | Vitest, Testing Library, jsdom, fake-indexeddb    |
-| Static hosting     | Cloudflare Pages                                  |
+| Area               | Technology                                                        |
+| ------------------ | ----------------------------------------------------------------- |
+| UI                 | React 19, TypeScript 6                                            |
+| Build              | Vite 8                                                            |
+| PWA                | `vite-plugin-pwa`, Workbox, custom service worker                 |
+| Persistence        | IndexedDB through `idb`                                           |
+| Maps & Location    | Leaflet, OpenStreetMap, Geolocation Web / Capacitor APIs          |
+| Native Android     | Capacitor 8 (Camera, Network, Local Notifications, Geolocation)   |
+| OTA Updates        | Capgo (`@capgo/capacitor-updater`, Capgo Cloud)                   |
+| Remote destination | Google Apps Script Web App and Google Sheets / Drive              |
+| Testing            | Vitest, Testing Library, jsdom, fake-indexeddb                    |
+| Static hosting     | Cloudflare Pages                                                  |
 
 Dependency versions are locked in `package-lock.json`. Use `npm ci` for reproducible installation; do not upgrade packages solely because newer versions exist.
 
@@ -167,15 +173,16 @@ For the spreadsheet schema, Apps Script deployment, Script Properties, and Cloud
 
 ## Available commands
 
-| Command                 | Purpose                                                |
-| ----------------------- | ------------------------------------------------------ |
-| `npm run dev`           | Start the Vite development server                      |
-| `npm run typecheck`     | Type-check application and build configuration         |
-| `npm run lint`          | Run ESLint across the repository                       |
-| `npm run test -- --run` | Run the Vitest suite once                              |
-| `npm run test`          | Run Vitest in watch mode                               |
-| `npm run build`         | Type-check and create the production bundle in `dist/` |
-| `npm run preview`       | Serve the production bundle locally                    |
+| Command                 | Purpose                                                               |
+| ----------------------- | --------------------------------------------------------------------- |
+| `npm run dev`           | Start the Vite development server                                     |
+| `npm run typecheck`     | Type-check application and build configuration                        |
+| `npm run lint`          | Run ESLint across the repository                                      |
+| `npm run test -- --run` | Run the Vitest suite once                                             |
+| `npm run test`          | Run Vitest in watch mode                                              |
+| `npm run build`         | Type-check and create the production bundle in `dist/`                |
+| `npm run preview`       | Serve the production bundle locally                                   |
+| `npm run capgo:upload`  | Build and upload live OTA bundle to Capgo Cloud for instant app update|
 
 Before opening a pull request or publishing a build, run:
 
@@ -187,7 +194,7 @@ npm run build
 git diff --check
 ```
 
-The M9.1.8 evidence baseline records 179 passing tests across 31 files, responsive checks at 320, 360, 390, 430, 768, and 1280 px, a successful Capacitor sync, a successful Android debug build, and APK installation/launch on a physical Android device. See the [evidence registry](docs/evidence/README.md) for limitations and artifacts. Re-run the checks for the commit you intend to release; historical evidence is not a substitute for current verification.
+The test suite includes unit tests across domain logic, IndexedDB storage, PWA sync handler, native notification adapters, and UI components.
 
 ## Testing the production PWA locally
 
@@ -198,7 +205,16 @@ npm run preview
 
 Use the preview URL printed by Vite. Installability and service-worker behavior require a secure context; `localhost` is accepted by modern browsers for local development. To verify offline boot, load the production build once while online, confirm the service worker controls the page, switch the browser offline, and reload.
 
-If a stale local service worker obscures a development change, clear the site's storage or unregister the worker in browser developer tools, then reload. Do not use this as a production update strategy.
+## Over-The-Air (OTA) Updates
+
+VKU Field Survey supports instant, background Over-The-Air updates on Android via **Capgo**:
+
+```powershell
+# Upload latest build directly to Capgo Cloud production channel
+npm run capgo:upload
+```
+
+When users open the app on Android, the `@capgo/capacitor-updater` plugin downloads and applies the latest bundle seamlessly in the background—no APK re-download or reinstall necessary!
 
 ## Android build and installation
 
@@ -210,7 +226,7 @@ npm run build
 npx cap sync android
 ```
 
-Create a debug APK with the checked-in Gradle wrapper:
+Create a release/debug APK with the checked-in Gradle wrapper:
 
 ```powershell
 Set-Location android
@@ -220,7 +236,7 @@ $env:GRADLE_USER_HOME = "$env:USERPROFILE\.gradle"
 Set-Location ..
 ```
 
-The generated APK is:
+The generated APK is located at:
 
 ```text
 android/app/build/outputs/apk/debug/app-debug.apk
@@ -231,10 +247,10 @@ Install and launch it on a connected device:
 ```powershell
 adb devices
 adb -s <DEVICE_ID> install -r ".\android\app\build\outputs\apk\debug\app-debug.apk"
-adb -s <DEVICE_ID> shell monkey -p com.vku.fieldsurvey -c android.intent.category.LAUNCHER 1
+adb -s <DEVICE_ID> shell am start -n com.vku.fieldsurvey/.MainActivity
 ```
 
-The Capacitor application ID is `com.vku.fieldsurvey`, and `dist/` is the configured native web asset directory. `android/local.properties` is machine-specific and must remain untracked.
+Pre-built package: [vku-field-survey.apk](https://vkufieldsurvey.vanhoang.online/downloads/vku-field-survey.apk) (~13.8 MB, Android 7.0+).
 
 ## Cloudflare Pages deployment
 
